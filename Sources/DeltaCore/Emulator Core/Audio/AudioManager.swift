@@ -81,12 +81,6 @@ public class AudioManager: NSObject, AudioRendering
         }
     }
     
-    public var respectsSilentMode: Bool = true {
-        didSet {
-            self.updateOutputVolume()
-        }
-    }
-    
     public private(set) var audioBuffer: RingBuffer
     
     public internal(set) var rate = 1.0 {
@@ -105,23 +99,22 @@ public class AudioManager: NSObject, AudioRendering
     private let audioEngine: AVAudioEngine
     private let audioPlayerNode: AVAudioPlayerNode
     private let timePitchEffect: AVAudioUnitTimePitch
-    
+
+    // Workaround for stored properties no longer being allowed marked @available
+    // Use a type-erased wrapper instead
     @available(iOS 13.0, *)
-    private var sourceNode: AVAudioSourceNode {
-        get {
-            if _sourceNode == nil
-            {
-                _sourceNode = self.makeSourceNode()
-            }
-            
-            return _sourceNode as! AVAudioSourceNode
-        }
-        set {
-            _sourceNode = newValue
-        }
+    private var sourceNode: AVAudioSourceNode! {
+        get { return self.sourceNodeInternal as? AVAudioSourceNode}
     }
-    private var _sourceNode: Any! = nil
-    
+
+    private lazy var sourceNodeInternal: Any? = {
+        if #available(iOS 13.0, *) {
+            return self.makeSourceNode()
+        } else {
+            return nil
+        }
+    }()
+
     private var audioConverter: AVAudioConverter?
     private var audioConverterRequiredFrameCount: AVAudioFrameCount?
     
@@ -328,7 +321,7 @@ private extension AudioManager
             {
                 self.audioEngine.detach(self.sourceNode)
                 
-                self.sourceNode = self.makeSourceNode()
+                self.sourceNodeInternal = self.makeSourceNode()
                 self.audioEngine.attach(self.sourceNode)
                 
                 self.audioEngine.connect(self.sourceNode, to: self.timePitchEffect, format: outputAudioFormat)
@@ -382,28 +375,14 @@ private extension AudioManager
         else
         {
             let route = AVAudioSession.sharedInstance().currentRoute
-            
-            if AVAudioSession.sharedInstance().isOtherAudioPlaying
+            if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice)
             {
-                // Always mute if another app is playing audio.
+                // Mute if playing through speaker or headphones.
                 self.audioEngine.mainMixerNode.outputVolume = 0.0
-            }
-            else if self.respectsSilentMode
-            {
-                if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice)
-                {
-                    // Respect mute switch IFF playing through speaker or headphones.
-                    self.audioEngine.mainMixerNode.outputVolume = 0.0
-                }
-                else
-                {
-                    // Ignore mute switch for other audio routes (e.g. AirPlay).
-                    self.audioEngine.mainMixerNode.outputVolume = 1.0
-                }
             }
             else
             {
-                // Ignore silent mode and always play game audio (unless another app is playing audio).
+                // Ignore mute switch for other audio routes (e.g. AirPlay).
                 self.audioEngine.mainMixerNode.outputVolume = 1.0
             }
         }

@@ -9,7 +9,7 @@
 import Foundation
 
 #if SWIFT_PACKAGE
-@_exported import CDeltaCore
+@_exported import DeltaTypes
 #endif
 
 extension GameType: CustomStringConvertible
