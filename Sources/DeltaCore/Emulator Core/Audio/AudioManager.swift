@@ -99,10 +99,22 @@ public class AudioManager: NSObject, AudioRendering
     private let audioEngine: AVAudioEngine
     private let audioPlayerNode: AVAudioPlayerNode
     private let timePitchEffect: AVAudioUnitTimePitch
-    
+
+    // Workaround for stored properties no longer being allowed marked @available
+    // Use a type-erased wrapper instead
     @available(iOS 13.0, *)
-    private lazy var sourceNode = self.makeSourceNode()
-    
+    private var sourceNode: AVAudioSourceNode! {
+        get { return self.sourceNodeInternal as? AVAudioSourceNode}
+    }
+
+    private lazy var sourceNodeInternal: Any? = {
+        if #available(iOS 13.0, *) {
+            return self.makeSourceNode()
+        } else {
+            return nil
+        }
+    }()
+
     private var audioConverter: AVAudioConverter?
     private var audioConverterRequiredFrameCount: AVAudioFrameCount?
     
@@ -309,7 +321,7 @@ private extension AudioManager
             {
                 self.audioEngine.detach(self.sourceNode)
                 
-                self.sourceNode = self.makeSourceNode()
+                self.sourceNodeInternal = self.makeSourceNode()
                 self.audioEngine.attach(self.sourceNode)
                 
                 self.audioEngine.connect(self.sourceNode, to: self.timePitchEffect, format: outputAudioFormat)
