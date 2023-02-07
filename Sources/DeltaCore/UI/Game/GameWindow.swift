@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import DeltaTypes
 
 public class GameWindow: UIWindow
 {
