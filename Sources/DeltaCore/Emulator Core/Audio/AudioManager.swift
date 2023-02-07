@@ -66,6 +66,12 @@ public class AudioManager: NSObject, AudioRendering {
         }
     }
     
+    public var respectsSilentMode: Bool = true {
+        didSet {
+            self.updateOutputVolume()
+        }
+    }
+    
     public private(set) var audioBuffer: RingBuffer
     
     public internal(set) var rate = 1.0 {
@@ -84,7 +90,7 @@ public class AudioManager: NSObject, AudioRendering {
     private let audioEngine: AVAudioEngine
     private let audioPlayerNode: AVAudioPlayerNode
     private let timePitchEffect: AVAudioUnitTimePitch
-
+    
     // Workaround for stored properties no longer being allowed marked @available
     // Use a type-erased wrapper instead
     @available(iOS 13.0, *)
@@ -99,7 +105,7 @@ public class AudioManager: NSObject, AudioRendering {
             return nil
         }
     }()
-
+    
     private var audioConverter: AVAudioConverter?
     private var audioConverterRequiredFrameCount: AVAudioFrameCount?
     
@@ -348,21 +354,38 @@ private extension AudioManager
             self.audioEngine.mainMixerNode.outputVolume = 0.0
         } else {
             let route = AVAudioSession.sharedInstance().currentRoute
-            if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice) {
-                // Mute if playing through speaker or headphones.
+
+            if AVAudioSession.sharedInstance().isOtherAudioPlaying
+            {
+                // Always mute if another app is playing audio.
                 self.audioEngine.mainMixerNode.outputVolume = 0.0
-            } else {
-                // Ignore mute switch for other audio routes (e.g. AirPlay).
+            }
+            else if self.respectsSilentMode
+            {
+                if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice)
+                {
+                    // Respect mute switch IFF playing through speaker or headphones.
+                    self.audioEngine.mainMixerNode.outputVolume = 0.0
+                }
+                else
+                {
+                    // Ignore mute switch for other audio routes (e.g. AirPlay).
+                    self.audioEngine.mainMixerNode.outputVolume = 1.0
+                }
+            }
+            else
+            {
+                // Ignore silent mode and always play game audio (unless another app is playing audio).
                 self.audioEngine.mainMixerNode.outputVolume = 1.0
             }
         }
     }
-    
+
     @available(iOS 13.0, *)
     func makeSourceNode() -> AVAudioSourceNode {
         var isPrimed = false
         var previousSampleCount: Int?
-        
+
         // Accessing AVAudioSession.sharedInstance() from render block may cause audio glitches,
         // so calculate sampleRateRatio now rather than later when needed 🤷‍♂️
         let sampleRateRatio = (self.audioFormat.sampleRate / AVAudioSession.sharedInstance().sampleRate).rounded(.up)
