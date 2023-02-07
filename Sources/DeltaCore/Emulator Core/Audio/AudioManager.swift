@@ -8,45 +8,37 @@
 
 import AVFoundation
 
-internal extension AVAudioFormat
-{
+internal extension AVAudioFormat {
     var frameSize: Int {
         return Int(self.streamDescription.pointee.mBytesPerFrame)
     }
 }
 
-private extension AVAudioSession
-{
-    func setDeltaCategory() throws
-    {
+private extension AVAudioSession {
+    func setDeltaCategory() throws {
         try AVAudioSession.sharedInstance().setCategory(.playAndRecord,
                                                         options: [.mixWithOthers, .allowBluetoothA2DP, .allowAirPlay])
     }
 }
 
-private extension AVAudioSessionRouteDescription
-{
-    var isHeadsetPluggedIn: Bool
-    {
+private extension AVAudioSessionRouteDescription {
+    var isHeadsetPluggedIn: Bool {
         let isHeadsetPluggedIn = self.outputs.contains { $0.portType == .headphones || $0.portType == .bluetoothA2DP }
         return isHeadsetPluggedIn
     }
     
-    var isOutputtingToReceiver: Bool
-    {
+    var isOutputtingToReceiver: Bool {
         let isOutputtingToReceiver = self.outputs.contains { $0.portType == .builtInReceiver }
         return isOutputtingToReceiver
     }
     
-    var isOutputtingToExternalDevice: Bool
-    {
+    var isOutputtingToExternalDevice: Bool {
         let isOutputtingToExternalDevice = self.outputs.contains { $0.portType != .builtInSpeaker && $0.portType != .builtInReceiver }
         return isOutputtingToExternalDevice
     }
 }
 
-public class AudioManager: NSObject, AudioRendering
-{
+public class AudioManager: NSObject, AudioRendering {
     /// Currently only supports 16-bit interleaved Linear PCM.
     public internal(set) var audioFormat: AVAudioFormat {
         didSet {
@@ -55,25 +47,18 @@ public class AudioManager: NSObject, AudioRendering
     }
     
     public var isEnabled = true {
-        didSet
-        {
+        didSet {
             self.audioBuffer.isEnabled = self.isEnabled
             
             self.updateOutputVolume()
             
-            do
-            {
-                if self.isEnabled
-                {
+            do {
+                if self.isEnabled {
                     try self.audioEngine.start()
-                }
-                else
-                {
+                } else {
                     self.audioEngine.pause()
                 }
-            }
-            catch
-            {
+            } catch {
                 print(error)
             }
             
@@ -130,7 +115,7 @@ public class AudioManager: NSObject, AudioRendering
     }
     
     private let muteSwitchMonitor = DLTAMuteSwitchMonitor()
-        
+
     public init(audioFormat: AVAudioFormat)
     {
         self.audioFormat = audioFormat
@@ -185,7 +170,7 @@ public extension AudioManager
             
             if #available(iOS 13.0, *)
             {
-               try AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
+                try AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
             
             try AVAudioSession.sharedInstance().setActive(true)
@@ -239,7 +224,7 @@ private extension AudioManager
         
         let availableFrameCount = AVAudioFrameCount(self.audioBuffer.availableBytesForReading / self.audioFormat.frameSize)
         if self.audioEngine.isRunning && availableFrameCount >= audioConverterRequiredFrameCount
-        {            
+        {
             var conversionError: NSError?
             let status = audioConverter.convert(to: outputBuffer, error: &conversionError) { (requiredPacketCount, outStatus) -> AVAudioBuffer? in
                 
@@ -317,17 +302,14 @@ private extension AudioManager
             self.audioEngine.disconnectNodeOutput(self.timePitchEffect)
             self.audioEngine.connect(self.timePitchEffect, to: self.audioEngine.mainMixerNode, format: outputAudioFormat)
 
-            if #available(iOS 13.0, *)
-            {
+            if #available(iOS 13.0, *) {
                 self.audioEngine.detach(self.sourceNode)
                 
                 self.sourceNodeInternal = self.makeSourceNode()
                 self.audioEngine.attach(self.sourceNode)
                 
                 self.audioEngine.connect(self.sourceNode, to: self.timePitchEffect, format: outputAudioFormat)
-            }
-            else
-            {
+            } else {
                 self.audioEngine.disconnectNodeOutput(self.audioPlayerNode)
                 self.audioEngine.connect(self.audioPlayerNode, to: self.timePitchEffect, format: outputAudioFormat)
                 
@@ -336,52 +318,40 @@ private extension AudioManager
                     let inputAudioBufferFrameCapacity = max(inputAudioBufferFrameCount, outputAudioBufferFrameCount)
                     
                     if let inputBuffer = AVAudioPCMBuffer(pcmFormat: self.audioFormat, frameCapacity: AVAudioFrameCount(inputAudioBufferFrameCapacity)),
-                        let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputAudioFormat, frameCapacity: AVAudioFrameCount(outputAudioBufferFrameCount))
+                       let outputBuffer = AVAudioPCMBuffer(pcmFormat: outputAudioFormat, frameCapacity: AVAudioFrameCount(outputAudioBufferFrameCount))
                     {
                         self.render(inputBuffer, into: outputBuffer)
                     }
                 }
             }
             
-            do
-            {
+            do {
                 // Explicitly set output port since .defaultToSpeaker option pauses external audio.
-                if AVAudioSession.sharedInstance().currentRoute.isOutputtingToReceiver
-                {
+                if AVAudioSession.sharedInstance().currentRoute.isOutputtingToReceiver {
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                 }
                 
                 try self.audioEngine.start()
                 
                 if #available(iOS 13.0, *) {}
-                else
-                {
+                else {
                     self.audioPlayerNode.play()
                 }
-            }
-            catch
-            {
+            } catch {
                 print(error)
             }
         }
     }
     
-    @objc func updateOutputVolume()
-    {
-        if !self.isEnabled
-        {
+    @objc func updateOutputVolume() {
+        if !self.isEnabled {
             self.audioEngine.mainMixerNode.outputVolume = 0.0
-        }
-        else
-        {
+        } else {
             let route = AVAudioSession.sharedInstance().currentRoute
-            if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice)
-            {
+            if self.isMuted && (route.isHeadsetPluggedIn || !route.isOutputtingToExternalDevice) {
                 // Mute if playing through speaker or headphones.
                 self.audioEngine.mainMixerNode.outputVolume = 0.0
-            }
-            else
-            {
+            } else {
                 // Ignore mute switch for other audio routes (e.g. AirPlay).
                 self.audioEngine.mainMixerNode.outputVolume = 1.0
             }
@@ -389,8 +359,7 @@ private extension AudioManager
     }
     
     @available(iOS 13.0, *)
-    func makeSourceNode() -> AVAudioSourceNode
-    {
+    func makeSourceNode() -> AVAudioSourceNode {
         var isPrimed = false
         var previousSampleCount: Int?
         
@@ -406,16 +375,14 @@ private extension AudioManager
             
             let requestedBytes = Int(frameCount) * audioFormat.frameSize
             
-            if !isPrimed
-            {
+            if !isPrimed {
                 // Make sure audio buffer has enough initial samples to prevent audio distortion.
                 
                 guard audioBuffer.availableBytesForReading >= requestedBytes * Int(sampleRateRatio) else { return kAudioFileStreamError_DataUnavailable }
                 isPrimed = true
             }
             
-            if let previousSampleCount = previousSampleCount, audioBuffer.availableBytesForReading < previousSampleCount
-            {
+            if let previousSampleCount = previousSampleCount, audioBuffer.availableBytesForReading < previousSampleCount {
                 // Audio buffer has been reset, so we need to prime it again.
                 
                 isPrimed = false
@@ -426,7 +393,7 @@ private extension AudioManager
                 isPrimed = false
                 return kAudioFileStreamError_DataUnavailable
             }
-                        
+
             let readBytes = audioBuffer.read(into: buffer, preferredSize: requestedBytes)
             unsafeAudioBufferList[0].mDataByteSize = UInt32(readBytes)
             

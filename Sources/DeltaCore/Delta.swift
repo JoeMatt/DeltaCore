@@ -9,8 +9,14 @@
 import Foundation
 
 #if SWIFT_PACKAGE
+#if canImport(DeltaTypes)
 @_exported import DeltaTypes
 #endif
+#endif
+
+public extension NSNotification.Name {
+    static let DeltaRegistrationRequestNotification: NSNotification.Name = NSNotification.Name(rawValue: "DeltaRegistrationRequestNotification")
+}
 
 extension GameType: CustomStringConvertible
 {
