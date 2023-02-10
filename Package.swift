@@ -32,7 +32,7 @@ let package = Package(
 
     ],
     dependencies: [
-        .package(name: "ZIPFoundation", url: "https://github.com/weichsel/ZIPFoundation.git", .upToNextMinor(from: "0.9.16"))
+        .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: .init(0, 9, 16)),
     ],
     targets: [
         .target(
