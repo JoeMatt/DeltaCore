@@ -8,7 +8,8 @@ let package = Package(
     platforms: [
         .iOS(.v12),
         .macOS(.v11),
-        .tvOS(.v12)
+        .tvOS(.v12),
+        .macCatalyst(.v13)
     ],
     products: [
         .library(name: "DeltaCore",
@@ -62,8 +63,8 @@ let package = Package(
             ],
             linkerSettings: [
                 .linkedFramework("UIKit", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
-                .linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
-                .linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
+                .linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
+                .linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
                 .linkedFramework("WatchKit", .when(platforms: [.watchOS]))
             ]
         ),

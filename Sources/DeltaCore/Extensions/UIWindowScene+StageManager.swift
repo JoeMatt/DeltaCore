@@ -13,7 +13,7 @@ import UIKit
     var _enhancedWindowingEnabled: Bool { get }
 }
 
-@available(iOS 16, *)
+@available(iOS 16, tvOS 13, *)
 extension UIWindowScene
 {
     var isStageManagerEnabled: Bool {

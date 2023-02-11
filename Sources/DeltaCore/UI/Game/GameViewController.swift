@@ -109,9 +109,11 @@ open class GameViewController: UIViewController, GameControllerReceiver
     private weak var delayCheckKeyboardFocusTimer: Timer?
     
     /// UIViewController
+    #if !os(tvOS)
     open override var prefersStatusBarHidden: Bool {
         return true
     }
+    #endif
     
     public required init()
     {
@@ -129,16 +131,19 @@ open class GameViewController: UIViewController, GameControllerReceiver
     
     private func initialize()
     {
+#if !os(tvOS)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillShow(with:)), name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillChangeFrame(with:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillHide(with:)), name: UIResponder.keyboardWillHideNotification, object: nil)
-        
-        if #available(iOS 13, *)
+#endif
+        if #available(iOS 13, tvOS 13, *)
         {
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willResignActive(with:)), name: UIScene.willDeactivateNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.didBecomeActive(with:)), name: UIScene.didActivateNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willEnterForeground(_:)), name: UIScene.willEnterForegroundNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.sceneKeyboardFocusDidChange(_:)), name: UIScene.keyboardFocusDidChangeNotification, object: nil)
+            if #available(tvOS 14.0, *) {
+                NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.sceneKeyboardFocusDidChange(_:)), name: UIScene.keyboardFocusDidChangeNotification, object: nil)
+            }
         }
         else
         {
@@ -159,12 +164,13 @@ open class GameViewController: UIViewController, GameControllerReceiver
     // MARK: - UIViewController -
     /// UIViewController
     // These would normally be overridden in a public extension, but overriding these methods in subclasses of GameViewController segfaults compiler if so
-    
+#if !os(tvOS)
     open override var prefersHomeIndicatorAutoHidden: Bool
     {
         let prefersHomeIndicatorAutoHidden = self.view.bounds.width > self.view.bounds.height
         return prefersHomeIndicatorAutoHidden
     }
+#endif
     
     open dynamic override func viewDidLoad()
     {
@@ -220,7 +226,7 @@ open class GameViewController: UIViewController, GameControllerReceiver
             self.controllerView.becomeFirstResponder()
         }
         
-        if #available(iOS 13, *)
+        if #available(iOS 13, tvOS 13, *)
         {
             if let scene = self.view.window?.windowScene
             {
@@ -394,8 +400,9 @@ open class GameViewController: UIViewController, GameControllerReceiver
             // To compensate, we manually "refresh" the game screen
             self.gameView.inputImage = self.gameView.outputImage
         }
-        
+        #if !os(tvOS)
         self.setNeedsUpdateOfHomeIndicatorAutoHidden()
+        #endif
     }
     
     // MARK: - KVO -
@@ -636,7 +643,7 @@ private extension GameViewController
 {
     @objc func willResignActive(with notification: Notification)
     {
-        if #available(iOS 13, *)
+        if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIScene, scene == self.view.window?.windowScene else { return }
         }
@@ -649,7 +656,7 @@ private extension GameViewController
     
     @objc func didBecomeActive(with notification: Notification)
     {
-        if #available(iOS 13, *)
+        if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIWindowScene, scene == self.view.window?.windowScene else { return }
         }
@@ -677,7 +684,7 @@ private extension GameViewController
             self.isEnteringForeground = false
         }
         
-        if #available(iOS 13, *)
+        if #available(iOS 13, tvOS 13, *)
         {
             // Make sure scene has keyboard focus before automatically resuming.
             guard let scene = self.view.window?.windowScene, scene.hasKeyboardFocus else { return }
@@ -691,7 +698,7 @@ private extension GameViewController
         
     @objc func willEnterForeground(_ notification: Notification)
     {
-        if #available(iOS 13, *)
+        if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIScene, scene == self.view.window?.windowScene else { return }
         }
@@ -718,6 +725,7 @@ private extension GameViewController
     
     @objc func keyboardWillShow(with notification: Notification)
     {
+#if !os(tvOS)
         guard let window = self.view.window, let traits = self.controllerView.controllerSkinTraits, traits.displayType == .splitView else { return }
         
         let systemKeyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as! CGRect
@@ -728,7 +736,7 @@ private extension GameViewController
         let relativeHeight = appFrame.maxY - systemKeyboardFrame.minY
         
         let isLocalKeyboard = notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool ?? false
-        if #available(iOS 16, *), let scene = self.view.window?.windowScene, scene.isStageManagerEnabled, !isLocalKeyboard
+        if #available(iOS 16, tvOS 13, *), let scene = self.view.window?.windowScene, scene.isStageManagerEnabled, !isLocalKeyboard
         {
             self.splitViewInputViewHeight = 0
         }
@@ -749,6 +757,7 @@ private extension GameViewController
             self.view.layoutIfNeeded()
         }
         animator.startAnimation()
+#endif
     }
     
     @objc func keyboardWillChangeFrame(with notification: Notification)
@@ -758,6 +767,7 @@ private extension GameViewController
     
     @objc func keyboardWillHide(with notification: Notification)
     {
+#if !os(tvOS)
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as! TimeInterval
         
         let rawAnimationCurve = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as! Int
@@ -772,16 +782,16 @@ private extension GameViewController
         animator.startAnimation()
         
         let isLocalKeyboard = notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool ?? false
-        if #available(iOS 13, *), let scene = self.view.window?.windowScene, scene.activationState == .foregroundInactive, isLocalKeyboard
+        if #available(iOS 13, tvOS 13, *), let scene = self.view.window?.windowScene, scene.activationState == .foregroundInactive, isLocalKeyboard
         {
             // Explicitly resign first responder to prevent keyboard controller automatically appearing when not frontmost app.
             self.controllerView.resignFirstResponder()
         }
-        
+#endif
         self.updateGameViews()
     }
     
-    @available(iOS 13.0, *)
+    @available(iOS 14.0, tvOS 14.0, *)
     @objc func sceneKeyboardFocusDidChange(_ notification: Notification)
     {
         guard let scene = notification.object as? UIWindowScene, scene == self.view.window?.windowScene else { return }

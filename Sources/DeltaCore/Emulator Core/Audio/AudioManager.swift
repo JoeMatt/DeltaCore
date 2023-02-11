@@ -93,13 +93,13 @@ public class AudioManager: NSObject, AudioRendering {
     
     // Workaround for stored properties no longer being allowed marked @available
     // Use a type-erased wrapper instead
-    @available(iOS 13.0, *)
+    @available(iOS 14.0, tvOS 13.0, *)
     private var sourceNode: AVAudioSourceNode! {
         get { return self.sourceNodeInternal as? AVAudioSourceNode}
     }
 
     private lazy var sourceNodeInternal: Any? = {
-        if #available(iOS 13.0, *) {
+        if #available(iOS 13.0, tvOS 13.0, *) {
             return self.makeSourceNode()
         } else {
             return nil
@@ -149,7 +149,7 @@ public class AudioManager: NSObject, AudioRendering {
         
         super.init()
         
-        if #available(iOS 13.0, *)
+        if #available(iOS 13.0, tvOS 13.0, *)
         {
             self.audioEngine.attach(self.sourceNode)
         }
@@ -174,7 +174,7 @@ public extension AudioManager
             try AVAudioSession.sharedInstance().setDeltaCategory()
             try AVAudioSession.sharedInstance().setPreferredIOBufferDuration(0.005)
             
-            if #available(iOS 13.0, *)
+            if #available(iOS 13.0, tvOS 13.0, *)
             {
                 try AVAudioSession.sharedInstance().setAllowHapticsAndSystemSoundsDuringRecording(true)
             }
@@ -308,7 +308,7 @@ private extension AudioManager
             self.audioEngine.disconnectNodeOutput(self.timePitchEffect)
             self.audioEngine.connect(self.timePitchEffect, to: self.audioEngine.mainMixerNode, format: outputAudioFormat)
 
-            if #available(iOS 13.0, *) {
+            if #available(iOS 13.0, tvOS 13.0, *) {
                 self.audioEngine.detach(self.sourceNode)
                 
                 self.sourceNodeInternal = self.makeSourceNode()
@@ -334,7 +334,9 @@ private extension AudioManager
             do {
                 // Explicitly set output port since .defaultToSpeaker option pauses external audio.
                 if AVAudioSession.sharedInstance().currentRoute.isOutputtingToReceiver {
+                    #if !os(tvOS)
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                    #endif
                 }
                 
                 try self.audioEngine.start()
@@ -381,7 +383,7 @@ private extension AudioManager
         }
     }
 
-    @available(iOS 13.0, *)
+    @available(iOS 14.0, tvOS 13.0, *)
     func makeSourceNode() -> AVAudioSourceNode {
         var isPrimed = false
         var previousSampleCount: Int?

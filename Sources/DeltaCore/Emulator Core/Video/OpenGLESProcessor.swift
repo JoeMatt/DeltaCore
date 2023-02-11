@@ -7,7 +7,16 @@
 //
 
 import CoreImage
+#if targetEnvironment(macCatalyst)
+import OpenGL
+import OpenGL.GLTypes
+import AppKit
+import GLUT
 import GLKit
+#else
+import GLKit
+public typealias GLContext = EAGLContext
+#endif
 
 class OpenGLESProcessor: VideoProcessor
 {
@@ -22,22 +31,28 @@ class OpenGLESProcessor: VideoProcessor
             self.resizeVideoBuffers()
         }
     }
-    
+
+#if !targetEnvironment(macCatalyst)
     private let context: EAGLContext
-    
+#endif
+
     private var framebuffer: GLuint = 0
     private var texture: GLuint = 0
     private var renderbuffer: GLuint = 0
     
     private var indexBuffer: GLuint = 0
     private var vertexBuffer: GLuint = 0
-    
-    init(videoFormat: VideoFormat, context: EAGLContext)
+
+    init(videoFormat: VideoFormat, context: GLContext)
     {
         self.videoFormat = videoFormat
-        self.context = EAGLContext(api: .openGLES2, sharegroup: context.sharegroup)!
+#if targetEnvironment(macCatalyst)
+#else
+        self.context = GLContext(api: .openGLES2, sharegroup: context.sharegroup)!
+#endif
+
     }
-    
+
     deinit
     {
         if self.renderbuffer > 0
