@@ -15,8 +15,10 @@ class TouchInputView: UIView
     override init(frame: CGRect)
     {
         super.init(frame: frame)
-        
+
+        #if !os(tvOS)
         self.isMultipleTouchEnabled = false
+        #endif
     }
     
     required init?(coder aDecoder: NSCoder) {

@@ -105,7 +105,7 @@ public extension ExternalGameControllerManager
         NotificationCenter.default.addObserver(self, selector: #selector(ExternalGameControllerManager.keyboardDidConnect(_:)), name: .externalKeyboardDidConnect, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(ExternalGameControllerManager.keyboardDidDisconnect(_:)), name: .externalKeyboardDidDisconnect, object: nil)
         
-        if #available(iOS 14, *)
+        if #available(iOS 14, tvOS 14, *)
         {
             NotificationCenter.default.addObserver(self, selector: #selector(ExternalGameControllerManager.gcKeyboardDidConnect(_:)), name: .GCKeyboardDidConnect, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(ExternalGameControllerManager.gcKeyboardDidDisconnect(_:)), name: .GCKeyboardDidDisconnect, object: nil)
@@ -144,7 +144,7 @@ public extension ExternalGameControllerManager
 {
     // Implementation based on Ian McDowell's tweet: https://twitter.com/ian_mcdowell/status/844572113759547392
     var isKeyboardConnected: Bool {
-        if #available(iOS 14, *)
+        if #available(iOS 14, tvOS 14, *)
         {
             return GCKeyboard.coalesced != nil
         }

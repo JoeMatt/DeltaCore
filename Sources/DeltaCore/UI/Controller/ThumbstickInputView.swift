@@ -54,10 +54,10 @@ class ThumbstickInputView: UIView
     
     private let imageView = UIImageView(image: nil)
     private let panGestureRecognizer = ImmediatePanGestureRecognizer(target: nil, action: nil)
-    
+    #if !os(tvOS)
     private let lightFeedbackGenerator = UISelectionFeedbackGenerator()
     private let mediumFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
-    
+    #endif
     private var isActivated = false
     
     private var trackingOrigin: CGPoint?
@@ -106,8 +106,10 @@ private extension ThumbstickInputView
             
             if self.isHapticFeedbackEnabled
             {
+#if !os(tvOS)
                 self.lightFeedbackGenerator.prepare()
                 self.mediumFeedbackGenerator.prepare()
+#endif
             }
             
             self.update()
@@ -154,7 +156,9 @@ private extension ThumbstickInputView
             
             if self.isHapticFeedbackEnabled
             {
+#if !os(tvOS)
                 self.mediumFeedbackGenerator.impactOccurred()
+#endif
             }
             
             self.update()
@@ -234,7 +238,9 @@ private extension ThumbstickInputView
         {
             if self.previousDirection != direction && self.isHapticFeedbackEnabled
             {
+#if !os(tvOS)
                 self.mediumFeedbackGenerator.impactOccurred()
+#endif
             }
             
             self.previousDirection = direction
@@ -243,7 +249,9 @@ private extension ThumbstickInputView
         {
             if isActivated && !self.isActivated && self.isHapticFeedbackEnabled
             {
+#if !os(tvOS)
                 self.lightFeedbackGenerator.selectionChanged()
+#endif
             }
             
             self.previousDirection = nil

@@ -10,22 +10,47 @@ import UIKit
 import CoreImage
 import GLKit
 import AVFoundation
+#if targetEnvironment(macCatalyst)
+import OpenGL.GLTypes
+import OpenGL.GL3
+import OpenGL
+import GLUT
+import Metal
+import MetalKit
+#endif
 
 // Create wrapper class to prevent exposing GLKView (and its annoying deprecation warnings) to clients.
-private class GameViewGLKViewDelegate: NSObject, GLKViewDelegate
+#if targetEnvironment(macCatalyst)
+private class GameViewMetalViewDelegate: NSObject
 {
     weak var gameView: GameView?
-    
+
     init(gameView: GameView)
     {
         self.gameView = gameView
     }
-    
+
+    func glkView(_ view: MTKView, drawIn rect: CGRect)
+    {
+        self.gameView?.glkView(view, drawIn: rect)
+    }
+}
+#else
+private class GameViewGLKViewDelegate: NSObject, GLKViewDelegate
+{
+    weak var gameView: GameView?
+
+    init(gameView: GameView)
+    {
+        self.gameView = gameView
+    }
+
     func glkView(_ view: GLKView, drawIn rect: CGRect)
     {
         self.gameView?.glkView(view, drawIn: rect)
     }
 }
+#endif
 
 public enum SamplerMode
 {
@@ -80,7 +105,11 @@ public class GameView: UIView
         
         return image
     }
-    
+
+#if targetEnvironment(macCatalyst)
+    private let metalView: MTKView
+    private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
+#else
     internal var eaglContext: EAGLContext {
         get { return self.glkView.context }
         set {
@@ -102,19 +131,21 @@ public class GameView: UIView
             }
         }
     }
-    private lazy var context: CIContext = self.makeContext()
-        
+
     private let glkView: GLKView
     private lazy var glkViewDelegate = GameViewGLKViewDelegate(gameView: self)
-    
+#endif
+    private lazy var context: CIContext = self.makeContext()
+
     private var lock = os_unfair_lock()
     private var didLayoutSubviews = false
     
     public override init(frame: CGRect)
     {
+#if !targetEnvironment(macCatalyst)
         let eaglContext = EAGLContext(api: .openGLES2)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
-        
+#endif
         super.init(frame: frame)
         
         self.initialize()
@@ -122,9 +153,10 @@ public class GameView: UIView
     
     public required init?(coder aDecoder: NSCoder)
     {
+#if !targetEnvironment(macCatalyst)
         let eaglContext = EAGLContext(api: .openGLES2)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
-        
+#endif
         super.init(coder: aDecoder)
         
         self.initialize()
@@ -133,8 +165,10 @@ public class GameView: UIView
     private func initialize()
     {        
         self.glkView.frame = self.bounds
+#if !targetEnvironment(macCatalyst)
         self.glkView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.glkView.delegate = self.glkViewDelegate
+#endif
         self.glkView.enableSetNeedsDisplay = false
         self.addSubview(self.glkView)
     }
@@ -210,7 +244,11 @@ private extension GameView
 {
     func makeContext() -> CIContext
     {
+#if targetEnvironment(macCatalyst)
+        //        let context = CIContext(mtlDevice: mtlDevice)
+#else
         let context = CIContext(eaglContext: self.glkView.context, options: [.workingColorSpace: NSNull()])
+#endif
         return context
     }
     
@@ -232,6 +270,8 @@ private extension GameView
 
 private extension GameView
 {
+#if targetEnvironment(macCatalyst)
+#else
     func glkView(_ view: GLKView, drawIn rect: CGRect)
     {
         glClearColor(0.0, 0.0, 0.0, 1.0)
@@ -243,4 +283,5 @@ private extension GameView
             self.context.draw(outputImage, in: bounds, from: outputImage.extent)
         }
     }
+#endif
 }
