@@ -7,9 +7,24 @@
 //
 
 import CoreImage
+#if canImport(AppKit)
+import AppKit
+#endif
 
 private extension CIImage
 {
+	#if os(macOS)
+	func flippingYAxis() -> CIImage
+	{
+		let transform = CGAffineTransform(scaleX: 1, y: -1)
+		let flippedImage = self.applyingFilter("CIAffineTransform", parameters: ["inputTransform": NSValue(nonretainedObject: transform)])
+
+		let translation = CGAffineTransform(translationX: 0, y: self.extent.height)
+		let translatedImage = flippedImage.applyingFilter("CIAffineTransform", parameters: ["inputTransform": NSValue(nonretainedObject: translation)])
+
+		return translatedImage
+	}
+	#else
     func flippingYAxis() -> CIImage
     {
         let transform = CGAffineTransform(scaleX: 1, y: -1)
@@ -20,6 +35,7 @@ private extension CIImage
         
         return translatedImage
     }
+	#endif
 }
 
 private extension CIFilter
@@ -66,10 +82,14 @@ public class FilterChain: CIFilter
     
     public override var outputImage: CIImage? {
         return self.inputFilters.reduce(self.inputImage, { (image, filter) -> CIImage? in
-            guard let image = image else { return nil }
-            
+
+			#if os(macOS)
+			guard let image = image as? CIImage else { return nil }
+			let flippedImage = image.flippingYAxis()
+			#else
+			guard let image = image else { return nil }
             let flippedImage = image.flippingYAxis()
-                        
+			#endif
             var outputImage: CIImage?
             
             if filter.inputKeys.contains(kCIInputImageKey)
@@ -98,8 +118,12 @@ public class FilterChain: CIFilter
             {
                 // Always translate CIImage back to origin so later calculations are correct.
                 let translation = CGAffineTransform(translationX: -image.extent.origin.x, y: -image.extent.origin.y)
+				#if os(macOS)
+				outputImage = image.applyingFilter("CIAffineTransform", parameters: ["inputTransform": NSValue(nonretainedObject: translation)])
+				#else
                 outputImage = image.applyingFilter("CIAffineTransform", parameters: ["inputTransform": NSValue(cgAffineTransform: translation)])
-            }
+				#endif
+			}
             
             return outputImage
         })

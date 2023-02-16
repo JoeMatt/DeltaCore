@@ -7,7 +7,11 @@
 //  Copyright © 2016 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import AVFoundation
 
 fileprivate extension NSLayoutConstraint
@@ -88,14 +92,16 @@ open class GameViewController: UIViewController, GameControllerReceiver
     }
     public private(set) var gameViews: [GameView] = []
         
-    open private(set) var controllerView: ControllerView!
     private var splitViewInputViewHeight: CGFloat = 0
     
     private let emulatorCoreQueue = DispatchQueue(label: "com.rileytestut.DeltaCore.GameViewController.emulatorCoreQueue", qos: .userInitiated)
-    
+
+	#if !os(macOS)
+	open private(set) var controllerView: ControllerView!
     private var _previousControllerSkin: ControllerSkinProtocol?
     private var _previousControllerSkinTraits: ControllerSkin.Traits?
-    
+	#endif
+
     private var appPlacementLayoutGuide: UILayoutGuide!
     private var appPlacementXConstraint: NSLayoutConstraint!
     private var appPlacementYConstraint: NSLayoutConstraint!
@@ -109,7 +115,7 @@ open class GameViewController: UIViewController, GameControllerReceiver
     private weak var delayCheckKeyboardFocusTimer: Timer?
     
     /// UIViewController
-    #if !os(tvOS)
+    #if !os(tvOS) && !os(macOS)
     open override var prefersStatusBarHidden: Bool {
         return true
     }
@@ -131,11 +137,12 @@ open class GameViewController: UIViewController, GameControllerReceiver
     
     private func initialize()
     {
-#if !os(tvOS)
+#if !os(tvOS) && !os(macOS)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillShow(with:)), name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillChangeFrame(with:)), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.keyboardWillHide(with:)), name: UIResponder.keyboardWillHideNotification, object: nil)
 #endif
+#if !os(macOS)
         if #available(iOS 13, tvOS 13, *)
         {
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willResignActive(with:)), name: UIScene.willDeactivateNotification, object: nil)
@@ -151,40 +158,53 @@ open class GameViewController: UIViewController, GameControllerReceiver
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.didBecomeActive(with:)), name: UIApplication.didBecomeActiveNotification, object: nil)
             NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willEnterForeground(_:)), name: UIApplication.willEnterForegroundNotification, object: nil)
         }
-    }
-    
+	#else
+	NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willResignActive(with:)), name: NSApplication.willResignActiveNotification, object: nil)
+	NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.didBecomeActive(with:)), name: NSApplication.didBecomeActiveNotification, object: nil)
+	NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.willEnterForeground(_:)), name: NSApplication.willBecomeActiveNotification, object: nil)
+	#endif
+	}
+
     deinit
     {
+
+#if !os(macOS)
         // controllerView might not be initialized by the time deinit is called.
         self.controllerView?.removeObserver(self, forKeyPath: #keyPath(ControllerView.isHidden), context: &kvoContext)
-        
+#endif
         self.emulatorCore?.stop()
     }
     
     // MARK: - UIViewController -
     /// UIViewController
     // These would normally be overridden in a public extension, but overriding these methods in subclasses of GameViewController segfaults compiler if so
-#if !os(tvOS)
+#if !os(tvOS) && !os(macOS)
     open override var prefersHomeIndicatorAutoHidden: Bool
     {
         let prefersHomeIndicatorAutoHidden = self.view.bounds.width > self.view.bounds.height
         return prefersHomeIndicatorAutoHidden
     }
 #endif
-    
+
     open dynamic override func viewDidLoad()
     {
         super.viewDidLoad()
-        
+
+#if !os(macOS)
         self.view.backgroundColor = UIColor.black
         
         self.appPlacementLayoutGuide = UILayoutGuide()
+		#else
+		self.view.layer?.backgroundColor = UIColor.black.cgColor
+		self.appPlacementLayoutGuide = NSLayoutGuide()
+		#endif
         self.view.addLayoutGuide(self.appPlacementLayoutGuide)
         
         let gameView = GameView(frame: CGRect.zero)
         self.view.addSubview(gameView)
         self.gameViews.append(gameView)
-        
+
+#if !os(macOS)
         self.controllerView = ControllerView(frame: CGRect.zero)
         self.controllerView.appPlacementLayoutGuide = self.appPlacementLayoutGuide
         self.view.addSubview(self.controllerView)
@@ -192,7 +212,8 @@ open class GameViewController: UIViewController, GameControllerReceiver
         self.controllerView.addObserver(self, forKeyPath: #keyPath(ControllerView.isHidden), options: [.old, .new], context: &kvoContext)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.updateGameViews), name: ControllerView.controllerViewDidChangeControllerSkinNotification, object: self.controllerView)
         NotificationCenter.default.addObserver(self, selector: #selector(GameViewController.controllerViewDidUpdateGameViews(_:)), name: ControllerView.controllerViewDidUpdateGameViewsNotification, object: self.controllerView)
-        
+		#endif
+
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(GameViewController.resumeEmulationIfNeeded))
         tapGestureRecognizer.delegate = self
         self.view.addGestureRecognizer(tapGestureRecognizer)
@@ -205,16 +226,31 @@ open class GameViewController: UIViewController, GameControllerReceiver
         self.appPlacementHeightConstraint = self.appPlacementLayoutGuide.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([self.appPlacementXConstraint, self.appPlacementYConstraint, self.appPlacementWidthConstraint, self.appPlacementHeightConstraint])
     }
-    
-    open dynamic override func viewWillAppear(_ animated: Bool)
-    {
-        super.viewWillAppear(animated)
-        
-        self.emulatorCoreQueue.async {
-            _ = self._startEmulation()
-        }
-    }
-    
+
+	#if os(macOS)
+	open dynamic override func viewWillAppear() {
+		super.viewWillAppear()
+
+		self.emulatorCoreQueue.async {
+			_ = self._startEmulation()
+		}
+	}
+	#else
+	open dynamic override func viewWillAppear(_ animated: Bool) {
+		super.viewWillAppear(animated)
+
+		self.emulatorCoreQueue.async {
+			_ = self._startEmulation()
+		}
+	}
+	#endif
+
+#if os(macOS)
+	open dynamic override func viewDidAppear()
+	{
+		super.viewDidAppear()
+	}
+	#else
     open dynamic override func viewDidAppear(_ animated: Bool)
     {
         super.viewDidAppear(animated)
@@ -234,7 +270,19 @@ open class GameViewController: UIViewController, GameControllerReceiver
             }
         }
     }
-    
+#endif
+
+#if os(macOS)
+	open dynamic override func viewDidDisappear()
+	{
+		super.viewDidDisappear()
+
+		self.emulatorCoreQueue.async {
+			_ = self._pauseEmulation()
+		}
+	}
+	#else
+
     open dynamic override func viewDidDisappear(_ animated: Bool)
     {
         super.viewDidDisappear(animated)
@@ -245,7 +293,25 @@ open class GameViewController: UIViewController, GameControllerReceiver
             _ = self._pauseEmulation()
         }
     }
-    
+#endif
+
+#if os(macOS)
+	override open func viewWillTransition(to size: CGSize)
+	{
+		super.viewWillTransition(to: size)
+
+			// Disable VideoManager temporarily to prevent random Metal crashes due to rendering while adjusting layout.
+		let isVideoManagerEnabled = self.emulatorCore?.videoManager.isEnabled ?? true
+		self.emulatorCore?.videoManager.isEnabled = false
+
+		self.view.needsUpdateConstraints = true
+
+		self.updateGameViews()
+
+			// Re-enable VideoManager if necessary.
+		self.emulatorCore?.videoManager.isEnabled = isVideoManagerEnabled
+	}
+	#else
     override open func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator)
     {
         super.viewWillTransition(to: size, with: coordinator)
@@ -277,11 +343,40 @@ open class GameViewController: UIViewController, GameControllerReceiver
             self.emulatorCore?.videoManager.isEnabled = isVideoManagerEnabled
         }
     }
-    
+	#endif // !macOS
+
+	#if os(macOS)
+	open override func viewDidLayout()
+	{
+		super.viewDidLayout()
+		var screenAspectRatio = self.emulatorCore?.preferredRenderingSize ?? CGSize(width: 1, height: 1)
+		let availableGameFrame: CGRect = self.view.bounds.divided(atDistance: 0, from: .maxYEdge).remainder
+
+		let gameScreenFrame = AVMakeRect(aspectRatio: screenAspectRatio, insideRect: availableGameFrame).rounded()
+		if self.appPlacementLayoutGuide.frame.rounded() != gameScreenFrame
+		{
+			self.appPlacementXConstraint.constant = gameScreenFrame.minX
+			self.appPlacementYConstraint.constant = gameScreenFrame.minY
+			self.appPlacementWidthConstraint.constant = gameScreenFrame.width
+			self.appPlacementHeightConstraint.constant = gameScreenFrame.height
+		}
+
+		self.gameView.frame = gameScreenFrame
+
+		if self.emulatorCore?.state != .running
+		{
+			// WORKAROUND
+			// Sometimes, iOS will cache the rendered image (such as when covered by a UIVisualEffectView), and as a result the game view might appear skewed
+			// To compensate, we manually "refresh" the game screen
+			self.gameView.inputImage = self.gameView.outputImage
+		}
+	}
+
+	#else
     open override func viewDidLayoutSubviews()
     {
-        super.viewDidLayoutSubviews()
-        
+		super.viewDidLayoutSubviews()
+
         var screenAspectRatio = self.emulatorCore?.preferredRenderingSize ?? CGSize(width: 1, height: 1)
         
         let controllerViewFrame: CGRect
@@ -400,11 +495,12 @@ open class GameViewController: UIViewController, GameControllerReceiver
             // To compensate, we manually "refresh" the game screen
             self.gameView.inputImage = self.gameView.outputImage
         }
-        #if !os(tvOS)
+        #if !os(tvOS) && !os(macOS)
         self.setNeedsUpdateOfHomeIndicatorAutoHidden()
         #endif
     }
-    
+#endif
+
     // MARK: - KVO -
     /// KVO
     open dynamic override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?)
@@ -413,9 +509,14 @@ open class GameViewController: UIViewController, GameControllerReceiver
 
         // Ensures the value is actually different, or else we might potentially run into an infinite loop if subclasses hide/show controllerView in viewDidLayoutSubviews()
         guard (change?[.newKey] as? Bool) != (change?[.oldKey] as? Bool) else { return }
-        
+
+		#if os(macOS)
+		self.view.needsLayout = true
+		self.view.layoutSubtreeIfNeeded()
+		#else
         self.view.setNeedsLayout()
         self.view.layoutIfNeeded()
+		#endif
     }
     
     // MARK: - GameControllerReceiver -
@@ -443,23 +544,27 @@ extension GameViewController
     {
         var previousGameViews = Array(self.gameViews.reversed())
         var gameViews = [GameView]()
-        
-        if let traits = self.controllerView.controllerSkinTraits, let screens = self.screens(for: traits), !self.controllerView.isHidden
-        {
-            for screen in screens
-            {
-                let gameView = previousGameViews.popLast() ?? GameView(frame: .zero)
-                gameView.update(for: screen)
-                gameViews.append(gameView)
-            }
-        }
-        else
-        {
-            for gameView in self.gameViews
-            {
-                gameView.filter = nil
-            }
-        }
+
+		#if os(macOS)
+		self.gameViews.forEach { $0.filter = nil }
+		#else
+		if let traits = self.controllerView.controllerSkinTraits, let screens = self.screens(for: traits), !self.controllerView.isHidden
+		{
+			for screen in screens
+			{
+				let gameView = previousGameViews.popLast() ?? GameView(frame: .zero)
+				gameView.update(for: screen)
+				gameViews.append(gameView)
+			}
+		}
+		else
+		{
+			for gameView in self.gameViews
+			{
+				gameView.filter = nil
+			}
+		}
+		#endif
         
         if gameViews.isEmpty
         {
@@ -470,8 +575,11 @@ extension GameViewController
         for gameView in gameViews
         {
             guard !self.gameViews.contains(gameView) else { continue }
-            
+			#if os(macOS)
+			self.view.addSubview(gameView, positioned: .above, relativeTo: self.gameView)
+			#else
             self.view.insertSubview(gameView, aboveSubview: self.gameView)
+			#endif
             self.emulatorCore?.add(gameView)
         }
         
@@ -484,7 +592,11 @@ extension GameViewController
         }
         
         self.gameViews = gameViews
+		#if os(macOS)
+		self.view.needsLayout = true
+		#else
         self.view.setNeedsLayout()
+		#endif
     }
 }
 
@@ -539,13 +651,15 @@ private extension GameViewController
     private func _resumeEmulation() -> Bool
     {
         guard let emulatorCore = self.emulatorCore, self.delegate?.gameViewControllerShouldResumeEmulation(self) ?? true else { return false }
-        
+
+#if !os(macOS)
         DispatchQueue.main.async {
             if self.view.window != nil
             {
                 self.controllerView.becomeFirstResponder()
             }
         }
+		#endif
         
         let result: Bool
         
@@ -565,40 +679,50 @@ private extension GameViewController
 {
     func prepareForGame()
     {
+		#if os(macOS)
         guard
-            let controllerView = self.controllerView,
             let emulatorCore = self.emulatorCore,
             let game = self.game
         else { return }
-        
-        for gameView in self.gameViews + controllerView.gameViews
-        {
-            emulatorCore.add(gameView)
-        }
-        
-        controllerView.addReceiver(self)
-        controllerView.addReceiver(emulatorCore)
-        
-        let controllerSkin = ControllerSkin.standardControllerSkin(for: game.type)
-        controllerView.controllerSkin = controllerSkin
-        
-        self.view.setNeedsUpdateConstraints()
+		self.gameViews.forEach{ emulatorCore.add($0) }
+		self.view.needsUpdateConstraints = true
+		#else
+		guard
+			let controllerView = self.controllerView,
+			let emulatorCore = self.emulatorCore,
+			let game = self.game
+		else { return }
+		for gameView in self.gameViews + controllerView.gameViews
+		{
+			emulatorCore.add(gameView)
+		}
+
+		controllerView.addReceiver(self)
+		controllerView.addReceiver(emulatorCore)
+
+		let controllerSkin = ControllerSkin.standardControllerSkin(for: game.type)
+		controllerView.controllerSkin = controllerSkin
+
+		self.view.setNeedsUpdateConstraints()
+		#endif
     }
     
     @objc func resumeEmulationIfNeeded()
     {
+		#if !os(macOS)
         self.controllerView.becomeFirstResponder()
-        
+		#endif
         // Pre-check whether we should actually resume while we're still on main queue.
         // This helps avoid potential deadlock due to calling dispatch_sync on main queue in _resumeEmulation.
         guard self.emulatorCore?.state == .paused, self.delegate?.gameViewControllerShouldResumeEmulation(self) ?? true else { return }
-        
-        self.emulatorCoreQueue.async {
+
+		self.emulatorCoreQueue.async {
             guard self.emulatorCore?.state == .paused else { return }
             _ = self._resumeEmulation()
         }
     }
-    
+
+#if !os(macOS)
     func screens(for traits: ControllerSkin.Traits) -> [ControllerSkin.Screen]?
     {
         guard let controllerSkin = self.controllerView.controllerSkin,
@@ -624,10 +748,18 @@ private extension GameViewController
         
         return screens
     }
+	#endif
 }
+
 
 extension GameViewController: UIGestureRecognizerDelegate
 {
+	#if os(macOS)
+	public func gestureRecognizer(_ gestureRecognizer: NSGestureRecognizer, shouldReceive touch: NSTouch) -> Bool {
+		let location = touch.location(in: self.gameView)
+		return self.gameView.bounds.contains(location)
+	}
+	#else
     public func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool
     {
         // We only need tap-to-resume when using Split View/Stage Manager to handle edge cases where emulation doesn't resume automatically.
@@ -636,6 +768,7 @@ extension GameViewController: UIGestureRecognizerDelegate
         let shouldReceiveTouch = self.controllerView.controllerSkinTraits?.displayType == .splitView || self.gameView.bounds.contains(location)
         return shouldReceiveTouch
     }
+	#endif
 }
 
 // MARK: - Notifications - 
@@ -643,10 +776,12 @@ private extension GameViewController
 {
     @objc func willResignActive(with notification: Notification)
     {
+		#if !os(macOS)
         if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIScene, scene == self.view.window?.windowScene else { return }
         }
+		#endif
         
         self.emulatorCoreQueue.async {
             guard self.emulatorCore?.state == .running else { return }
@@ -656,10 +791,12 @@ private extension GameViewController
     
     @objc func didBecomeActive(with notification: Notification)
     {
+		#if !os(macOS)
         if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIWindowScene, scene == self.view.window?.windowScene else { return }
         }
+		#endif
                         
         if #available(iOS 16, *), self.isEnteringForeground
         {
@@ -683,12 +820,14 @@ private extension GameViewController
         {
             self.isEnteringForeground = false
         }
-        
+
+#if !os(macOS)
         if #available(iOS 13, tvOS 13, *)
         {
             // Make sure scene has keyboard focus before automatically resuming.
             guard let scene = self.view.window?.windowScene, scene.hasKeyboardFocus else { return }
         }
+		#endif
         
         self.emulatorCoreQueue.async {
             guard self.emulatorCore?.state == .paused else { return }
@@ -698,20 +837,23 @@ private extension GameViewController
         
     @objc func willEnterForeground(_ notification: Notification)
     {
+#if !os(macOS)
         if #available(iOS 13, tvOS 13, *)
         {
             guard let scene = notification.object as? UIScene, scene == self.view.window?.windowScene else { return }
         }
+		#endif
         
         self.isEnteringForeground = true
     }
-    
+
+#if !os(macOS)
     @objc func controllerViewDidUpdateGameViews(_ notification: Notification)
     {
         guard let addedGameViews = notification.userInfo?[ControllerView.NotificationKey.addedGameViews] as? Set<GameView>,
               let removedGameViews = notification.userInfo?[ControllerView.NotificationKey.removedGameViews] as? Set<GameView>
-        else { return }        
-        
+        else { return }
+
         for gameView in addedGameViews
         {
             self.emulatorCore?.add(gameView)
@@ -722,10 +864,11 @@ private extension GameViewController
             self.emulatorCore?.remove(gameView)
         }
     }
+	#endif
     
     @objc func keyboardWillShow(with notification: Notification)
     {
-#if !os(tvOS)
+#if !os(tvOS) && !os(macOS)
         guard let window = self.view.window, let traits = self.controllerView.controllerSkinTraits, traits.displayType == .splitView else { return }
         
         let systemKeyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as! CGRect
@@ -767,7 +910,7 @@ private extension GameViewController
     
     @objc func keyboardWillHide(with notification: Notification)
     {
-#if !os(tvOS)
+#if !os(tvOS) && !os(macOS) && !os(macOS)
         let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as! TimeInterval
         
         let rawAnimationCurve = notification.userInfo?[UIResponder.keyboardAnimationCurveUserInfoKey] as! Int
@@ -790,12 +933,12 @@ private extension GameViewController
 #endif
         self.updateGameViews()
     }
-    
+
+#if !os(macOS)
     @available(iOS 14.0, tvOS 14.0, *)
     @objc func sceneKeyboardFocusDidChange(_ notification: Notification)
     {
         guard let scene = notification.object as? UIWindowScene, scene == self.view.window?.windowScene else { return }
-        
         if #available(iOS 16, *)
         {
             // HACK: iOS 16 beta 5 sends multiple incorrect keyboard focus notifications when resuming from background.
@@ -814,7 +957,6 @@ private extension GameViewController
             // First screen is dynamic, so explicitly update game views.
             self.updateGameViews()
         }
-        
         // Must run on emulatorCoreQueue to ensure emulatorCore state is accurate.
         self.emulatorCoreQueue.async {
             if scene.hasKeyboardFocus
@@ -829,4 +971,5 @@ private extension GameViewController
             }
         }
     }
+#endif // !macOS
 }

@@ -6,6 +6,7 @@
 //  Copyright © 2018 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 public extension UIApplication
@@ -15,4 +16,12 @@ public extension UIApplication
         return UIApplication.value(forKey: "sharedApplication") as? UIApplication
     }
 }
+#elseif canImport(AppKit)
+import AppKit
 
+public extension NSApplication {
+	class var delta_shared: NSApplication? {
+		return NSApplication.value(forKey: "sharedApplication") as? NSApplication
+	}
+}
+#endif

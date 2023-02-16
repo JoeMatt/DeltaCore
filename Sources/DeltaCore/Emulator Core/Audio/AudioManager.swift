@@ -14,6 +14,7 @@ internal extension AVAudioFormat {
     }
 }
 
+#if !os(macOS)
 private extension AVAudioSession {
     func setDeltaCategory() throws {
         try AVAudioSession.sharedInstance().setCategory(.playAndRecord,
@@ -37,6 +38,7 @@ private extension AVAudioSessionRouteDescription {
         return isOutputtingToExternalDevice
     }
 }
+#endif
 
 public class AudioManager: NSObject, AudioRendering {
     /// Currently only supports 16-bit interleaved Linear PCM.
@@ -99,7 +101,7 @@ public class AudioManager: NSObject, AudioRendering {
     }
 
     private lazy var sourceNodeInternal: Any? = {
-        if #available(iOS 13.0, tvOS 13.0, *) {
+		if #available(iOS 13.0, tvOS 13.0, macOS 13.0, *) {
             return self.makeSourceNode()
         } else {
             return nil
@@ -132,7 +134,9 @@ public class AudioManager: NSObject, AudioRendering {
         do
         {
             // Set category before configuring AVAudioEngine to prevent pausing any currently playing audio from another app.
+#if !os(macOS)
             try AVAudioSession.sharedInstance().setDeltaCategory()
+			#endif
         }
         catch
         {
@@ -157,7 +161,9 @@ public class AudioManager: NSObject, AudioRendering {
         self.updateOutputVolume()
         
         NotificationCenter.default.addObserver(self, selector: #selector(AudioManager.resetAudioEngine), name: .AVAudioEngineConfigurationChange, object: nil)
+#if !os(macOS)
         NotificationCenter.default.addObserver(self, selector: #selector(AudioManager.resetAudioEngine), name: AVAudioSession.routeChangeNotification, object: nil)
+		#endif
     }
 }
 
@@ -168,7 +174,8 @@ public extension AudioManager
         self.muteSwitchMonitor.startMonitoring { [weak self] (isMuted) in
             self?.isMuted = isMuted
         }
-        
+
+#if !os(macOS)
         do
         {
             try AVAudioSession.sharedInstance().setDeltaCategory()
@@ -185,6 +192,7 @@ public extension AudioManager
         {
             print(error)
         }
+		#endif
         
         self.resetAudioEngine()
     }
@@ -285,8 +293,12 @@ private extension AudioManager
     {
         self.renderingQueue.sync {
             self.audioPlayerNode.reset()
-            
+
+			#if !os(macOS)
             guard let outputAudioFormat = AVAudioFormat(standardFormatWithSampleRate: AVAudioSession.sharedInstance().sampleRate, channels: self.audioFormat.channelCount) else { return }
+			#else
+			guard let outputAudioFormat = AVAudioFormat(standardFormatWithSampleRate: 44100.0, channels: self.audioFormat.channelCount) else { return }
+			#endif
             
             let inputAudioBufferFrameCount = Int(self.audioFormat.sampleRate * self.frameDuration)
             let outputAudioBufferFrameCount = Int(outputAudioFormat.sampleRate * self.frameDuration)
@@ -308,7 +320,7 @@ private extension AudioManager
             self.audioEngine.disconnectNodeOutput(self.timePitchEffect)
             self.audioEngine.connect(self.timePitchEffect, to: self.audioEngine.mainMixerNode, format: outputAudioFormat)
 
-            if #available(iOS 13.0, tvOS 13.0, *) {
+			if #available(iOS 13.0, tvOS 13.0, macOS 13.0, *) {
                 self.audioEngine.detach(self.sourceNode)
                 
                 self.sourceNodeInternal = self.makeSourceNode()
@@ -332,12 +344,14 @@ private extension AudioManager
             }
             
             do {
+#if !os(macOS)
                 // Explicitly set output port since .defaultToSpeaker option pauses external audio.
                 if AVAudioSession.sharedInstance().currentRoute.isOutputtingToReceiver {
                     #if !os(tvOS)
                     try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
                     #endif
                 }
+				#endif
                 
                 try self.audioEngine.start()
                 
@@ -355,6 +369,7 @@ private extension AudioManager
         if !self.isEnabled {
             self.audioEngine.mainMixerNode.outputVolume = 0.0
         } else {
+#if !os(macOS)
             let route = AVAudioSession.sharedInstance().currentRoute
 
             if AVAudioSession.sharedInstance().isOtherAudioPlaying
@@ -380,17 +395,41 @@ private extension AudioManager
                 // Ignore silent mode and always play game audio (unless another app is playing audio).
                 self.audioEngine.mainMixerNode.outputVolume = 1.0
             }
+			#else
+			if self.respectsSilentMode
+			{
+				if self.isMuted
+				{
+					// Respect mute switch IFF playing through speaker or headphones.
+					self.audioEngine.mainMixerNode.outputVolume = 0.0
+				}
+				else
+				{
+					// Ignore mute switch for other audio routes (e.g. AirPlay).
+					self.audioEngine.mainMixerNode.outputVolume = 1.0
+				}
+			}
+			else
+			{
+				// Ignore silent mode and always play game audio (unless another app is playing audio).
+				self.audioEngine.mainMixerNode.outputVolume = 1.0
+			}
+			#endif
         }
     }
 
-    @available(iOS 14.0, tvOS 13.0, *)
+    @available(iOS 14.0, tvOS 13.0, macOS 13, *)
     func makeSourceNode() -> AVAudioSourceNode {
         var isPrimed = false
         var previousSampleCount: Int?
 
         // Accessing AVAudioSession.sharedInstance() from render block may cause audio glitches,
         // so calculate sampleRateRatio now rather than later when needed 🤷‍♂️
+#if !os(macOS)
         let sampleRateRatio = (self.audioFormat.sampleRate / AVAudioSession.sharedInstance().sampleRate).rounded(.up)
+		#else
+		let sampleRateRatio: Double = 1.0
+		#endif
         
         let sourceNode = AVAudioSourceNode(format: self.audioFormat) { [audioFormat, audioBuffer] (_, _, frameCount, audioBufferList) -> OSStatus in
             defer { previousSampleCount = audioBuffer.availableBytesForReading }

@@ -10,6 +10,10 @@ import Foundation
 import Accelerate
 import CoreImage
 import GLKit
+#if canImport(Metal)
+import Metal
+import MetalKit
+#endif
 
 protocol VideoProcessor
 {
@@ -65,9 +69,21 @@ public class VideoManager: NSObject, VideoRendering
     public init(videoFormat: VideoFormat)
     {
         self.videoFormat = videoFormat
+		#if os(macOS)
+		let attributes: [NSOpenGLPixelFormatAttribute] = [
+			UInt32(NSOpenGLPFAAccelerated),
+			UInt32(NSOpenGLPFAColorSize), UInt32(32),
+			UInt32(NSOpenGLPFAOpenGLProfile),
+			UInt32( NSOpenGLProfileVersion3_2Core),
+			UInt32(0)
+		]
+		let pixelFormat = NSOpenGLPixelFormat(attributes: attributes)!
+		self.context = NSOpenGLContext(format: pixelFormat, share: nil)!
+		self.ciContext = CIContext.init(cglContext: self.context.cglContextObj!, pixelFormat: self.context.pixelFormat.cglPixelFormatObj)
+		#else
         self.context = EAGLContext(api: .openGLES2)!
         self.ciContext = CIContext(eaglContext: self.context, options: [.workingColorSpace: NSNull()])
-        
+		#endif
         switch videoFormat.format
         {
         case .bitmap: self.processor = BitmapProcessor(videoFormat: videoFormat)
@@ -104,7 +120,12 @@ public extension VideoManager
 {
     func add(_ gameView: GameView)
     {
-        gameView.eaglContext = self.context
+
+		#if !os(macOS)
+		gameView.eaglContext = self.context
+		#else
+		// TODO: What to do here for metal?
+		#endif
         self.gameViews.append(gameView)
     }
     
@@ -175,8 +196,12 @@ public extension VideoManager
             let dataProvider = CGDataProvider(data: data as CFData),
             let cgImage = CGImage(width: imageWidth, height: imageHeight, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: imageWidth * 4, space: colorSpace, bitmapInfo: bitmapInfo, provider: dataProvider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
         else { return nil }
-        
+
+		#if os(macOS)
+		let image = NSImage(cgImage: cgImage, size: .init(width: imageWidth, height: imageHeight))
+		#else
         let image = UIImage(cgImage: cgImage)
+		#endif
         return image
     }
 }

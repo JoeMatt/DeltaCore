@@ -40,12 +40,12 @@ public class ExternalGameControllerManager: UIResponder
     public private(set) var connectedControllers: [GameController] = []
     
     public var automaticallyAssignsPlayerIndexes: Bool
-    
+
     internal var keyboardController: KeyboardGameController? {
         let keyboardController = self.connectedControllers.lazy.compactMap { $0 as? KeyboardGameController }.first
         return keyboardController
     }
-    
+
     private var nextAvailablePlayerIndex: Int {
         var nextPlayerIndex = -1
         
@@ -79,6 +79,12 @@ public class ExternalGameControllerManager: UIResponder
         
         super.init()
     }
+
+	#if os(macOS)
+	required init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+	#endif
 }
 
 //MARK: - Discovery -

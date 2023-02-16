@@ -6,33 +6,41 @@
 //  Copyright (c) 2015 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+#endif
 import CoreImage
 import GLKit
 import AVFoundation
-#if targetEnvironment(macCatalyst)
+#if targetEnvironment(macCatalyst) || os(macOS)
 import OpenGL.GLTypes
 import OpenGL.GL3
 import OpenGL
 import GLUT
 import Metal
 import MetalKit
+import GLKit
 #endif
 
 // Create wrapper class to prevent exposing GLKView (and its annoying deprecation warnings) to clients.
-#if targetEnvironment(macCatalyst)
-private class GameViewMetalViewDelegate: NSObject
+#if targetEnvironment(macCatalyst) || os(macOS)
+private class GameViewMetalViewDelegate: NSObject, MTKViewDelegate
 {
+	func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+		assertionFailure("Do something?")
+	}
+
+	func draw(in view: MTKView) {
+		self.gameView?.metalView(view)
+	}
+
     weak var gameView: GameView?
 
     init(gameView: GameView)
     {
         self.gameView = gameView
-    }
-
-    func glkView(_ view: MTKView, drawIn rect: CGRect)
-    {
-        self.gameView?.glkView(view, drawIn: rect)
     }
 }
 #else
@@ -57,6 +65,12 @@ public enum SamplerMode
     case linear
     case nearestNeighbor
 }
+
+#if os(macOS)
+public extension NSView {
+	public func setNeedsLayout() { self.needsLayout = true }
+}
+#endif
 
 public class GameView: UIView
 {
@@ -106,9 +120,9 @@ public class GameView: UIView
         return image
     }
 
-#if targetEnvironment(macCatalyst)
-    private let metalView: MTKView
-    private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
+#if targetEnvironment(macCatalyst) || os(macOS)
+	internal let metalView: MTKView
+	private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
 #else
     internal var eaglContext: EAGLContext {
         get { return self.glkView.context }
@@ -142,10 +156,13 @@ public class GameView: UIView
     
     public override init(frame: CGRect)
     {
-#if !targetEnvironment(macCatalyst)
+#if !targetEnvironment(macCatalyst) && !os(macOS)
         let eaglContext = EAGLContext(api: .openGLES2)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
-#endif
+		#else
+		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
+		self.metalView = .init(frame: .zero, device: device)
+		#endif
         super.init(frame: frame)
         
         self.initialize()
@@ -153,17 +170,27 @@ public class GameView: UIView
     
     public required init?(coder aDecoder: NSCoder)
     {
-#if !targetEnvironment(macCatalyst)
+#if !targetEnvironment(macCatalyst) && !os(macOS)
         let eaglContext = EAGLContext(api: .openGLES2)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
+#else
+		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
+		self.metalView = .init(frame: .zero, device: device)
 #endif
-        super.init(coder: aDecoder)
+		super.init(coder: aDecoder)
         
         self.initialize()
     }
     
     private func initialize()
-    {        
+    {
+		#if os(macOS)
+		self.metalView.frame = self.bounds
+		self.metalView.autoresizingMask = [.width, .height]
+		self.metalView.delegate = self.metalViewDelegate
+		self.metalView.enableSetNeedsDisplay = false
+		self.addSubview(self.metalView)
+		#else
         self.glkView.frame = self.bounds
 #if !targetEnvironment(macCatalyst)
         self.glkView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -171,8 +198,24 @@ public class GameView: UIView
 #endif
         self.glkView.enableSetNeedsDisplay = false
         self.addSubview(self.glkView)
+		#endif
     }
-    
+
+	#if os(macOS)
+	override public func viewDidMoveToWindow() {
+		if let window = self.window {
+//			self.metalView.scaleUnitSquare(to: window.screen?.frame.size)
+			self.metalView.layer?.contentsScale = window.screen?.backingScaleFactor ?? 1.0
+			self.update()
+		}
+	}
+
+	override public func layoutSubtreeIfNeeded() {
+		super.layoutSubtreeIfNeeded()
+		self.metalView.isHidden = (self.outputImage == nil)
+		self.didLayoutSubviews = true
+	}
+	#else
     public override func didMoveToWindow()
     {
         if let window = self.window
@@ -190,8 +233,10 @@ public class GameView: UIView
         
         self.didLayoutSubviews = true
     }
+	#endif
 }
 
+#if canImport(UIKit)
 public extension GameView
 {
     func snapshot() -> UIImage?
@@ -239,12 +284,13 @@ public extension GameView
         self.filter = filterChain
     }
 }
+#endif // UIKit
 
 private extension GameView
 {
     func makeContext() -> CIContext
     {
-#if targetEnvironment(macCatalyst)
+#if targetEnvironment(macCatalyst) || os(macOS)
         //        let context = CIContext(mtlDevice: mtlDevice)
 #else
         let context = CIContext(eaglContext: self.glkView.context, options: [.workingColorSpace: NSNull()])
@@ -264,13 +310,28 @@ private extension GameView
         // Otherwise, the app may crash due to race conditions when creating framebuffer from background thread.
         guard self.didLayoutSubviews else { return }
 
+		#if os(macOS)
+		self.metalView.display()
+		#else
         self.glkView.display()
+		#endif
     }
 }
 
 private extension GameView
 {
-#if targetEnvironment(macCatalyst)
+#if targetEnvironment(macCatalyst) || os(macOS)
+	func metalView(_ view: MTKView)
+	{
+		glClearColor(0.0, 0.0, 0.0, 1.0)
+		glClear(UInt32(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
+
+		if let outputImage = self.outputImage
+		{
+			let bounds = CGRect(x: 0, y: 0, width: self.metalView.drawableSize.width, height: self.metalView.drawableSize.height)
+			self.context.draw(outputImage, in: bounds, from: outputImage.extent)
+		}
+	}
 #else
     func glkView(_ view: GLKView, drawIn rect: CGRect)
     {

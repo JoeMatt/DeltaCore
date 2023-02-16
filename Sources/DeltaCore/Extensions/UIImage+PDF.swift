@@ -8,6 +8,7 @@
 //  Based on Erica Sadun's UIImage+PDFUtility ( https://github.com/erica/useful-things/blob/master/useful%20pack/UIImage%2BPDF/UIImage%2BPDFUtility.m )
 //
 
+#if canImport(UIKit)
 import UIKit
 import CoreGraphics
 import AVFoundation
@@ -68,3 +69,4 @@ internal extension UIImage
         return image
     }
 }
+#endif
