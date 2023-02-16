@@ -6,7 +6,7 @@
 //  Copyright © 2015 Riley Testut. All rights reserved.
 //
 
-import UIKit
+import CoreGraphics
 
 internal extension CGRect
 {

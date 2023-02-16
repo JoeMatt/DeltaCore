@@ -6,6 +6,7 @@
 //  Copyright © 2019 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 class ButtonsInputView: UIView
@@ -213,3 +214,4 @@ private extension ButtonsInputView
         }
     }
 }
+#endif

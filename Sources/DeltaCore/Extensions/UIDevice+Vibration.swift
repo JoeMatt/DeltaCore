@@ -6,6 +6,7 @@
 //  Copyright © 2016 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 import AudioToolbox
 
@@ -91,3 +92,4 @@ private extension UIDevice
         return modelGeneration
     }
 }
+#endif

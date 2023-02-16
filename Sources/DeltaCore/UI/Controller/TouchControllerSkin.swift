@@ -6,6 +6,7 @@
 //  Copyright © 2020 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 import AVFoundation
 
@@ -100,3 +101,4 @@ extension TouchControllerSkin: ControllerSkinProtocol
         return self.controllerSkin.aspectRatio(for: traits)
     }
 }
+#endif

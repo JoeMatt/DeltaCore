@@ -6,6 +6,7 @@
 //  Copyright © 2016 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 public protocol ControllerSkinProtocol
@@ -68,3 +69,4 @@ public func ~=(pattern: ControllerSkinProtocol?, value: ControllerSkinProtocol?)
 {
     return pattern == value
 }
+#endif

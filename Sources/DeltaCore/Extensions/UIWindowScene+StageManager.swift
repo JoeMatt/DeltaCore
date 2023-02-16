@@ -6,6 +6,7 @@
 //  Copyright © 2022 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 @objc private protocol UIWindowScenePrivate: NSObjectProtocol
@@ -24,3 +25,4 @@ extension UIWindowScene
         return isStageManagerEnabled
     }
 }
+#endif

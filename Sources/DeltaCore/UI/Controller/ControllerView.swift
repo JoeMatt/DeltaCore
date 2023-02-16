@@ -6,6 +6,7 @@
 //  Copyright (c) 2015 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 private struct ControllerViewInputMapping: GameControllerInputMappingProtocol
@@ -828,3 +829,4 @@ extension ControllerView: UIKeyInput
     {
     }
 }
+#endif

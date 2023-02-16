@@ -6,6 +6,7 @@
 //  Copyright © 2015 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 #if FRAMEWORK || STATIC_LIBRARY || SWIFT_PACKAGE
@@ -920,3 +921,4 @@ private extension ControllerSkin
         }
     }
 }
+#endif

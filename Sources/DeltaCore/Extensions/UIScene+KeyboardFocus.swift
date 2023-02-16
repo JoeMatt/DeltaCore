@@ -6,6 +6,7 @@
 //  Copyright © 2022 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 private var isTrackingKeyboardFocusKey: UInt8 = 0
@@ -95,3 +96,4 @@ private extension UIScene
         }
     }
 }
+#endif

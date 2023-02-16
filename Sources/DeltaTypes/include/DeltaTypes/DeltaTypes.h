@@ -36,7 +36,7 @@ extern NSNotificationName _Nonnull const DeltaRegistrationRequestNotification;
 // Used by GameWindow.
 @interface NSWindow (Private)
 
-@property (nullable, weak, nonatomic, setter=_setLastFirstResponder:) UIResponder *_lastFirstResponder /* API_AVAILABLE(ios(16)) */;
+@property (nullable, weak, nonatomic, setter=_setLastFirstResponder:) NSResponder *_lastFirstResponder /* API_AVAILABLE(ios(16)) */;
 - (void)_restoreFirstResponder /* API_AVAILABLE(ios(16)) */;
 
 @end

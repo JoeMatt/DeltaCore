@@ -6,9 +6,17 @@
 //  Copyright © 2018 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
+#else
+import AppKit
+import GameController
+import IOKit
+public typealias UIKeyModifierFlags = NSEvent.ModifierFlags
+#endif
 import ObjectiveC
 
+#if canImport(UIKit)
 public extension UIResponder
 {
     @objc func keyPressesBegan(_ presses: Set<KeyPress>, with event: UIEvent)
@@ -21,37 +29,63 @@ public extension UIResponder
         self.next?.keyPressesEnded(presses, with: event)
     }
 }
+#else
+public extension NSResponder
+{
+	@objc func keyPressesBegan(_ presses: Set<KeyPress>, with event: NSEvent)
+	{
+		self.nextResponder?.keyPressesBegan(presses, with: event)
+	}
 
+	@objc func keyPressesEnded(_ presses: Set<KeyPress>, with event: NSEvent)
+	{
+		self.nextResponder?.keyPressesEnded(presses, with: event)
+	}
+}
+#endif
+
+#if canImport(UIKit)
 extension UIResponder
 {
     @objc(_keyCommandForEvent:target:)
     @NSManaged func _keyCommand(for event: UIEvent, target: UnsafeMutablePointer<UIResponder>) -> UIKeyCommand?
 }
+#endif
 
 @objc public class KeyPress: NSObject
 {
     public fileprivate(set) var key: String
     public fileprivate(set) var keyCode: Int
-    
+
     public fileprivate(set) var modifierFlags: UIKeyModifierFlags
     
     public fileprivate(set) var isActive: Bool = true
-    
+
     fileprivate init(key: String, keyCode: Int, modifierFlags: UIKeyModifierFlags)
-    {
-        self.key = key
-        self.keyCode = keyCode
-        self.modifierFlags = modifierFlags
-    }
+	{
+		self.key = key
+		self.keyCode = keyCode
+		self.modifierFlags = modifierFlags
+	}
 }
 
 public class KeyboardResponder: UIResponder
 {
     private let _nextResponder: UIResponder?
-    
+
+	#if os(macOS)
+	public override var nextResponder: UIResponder? {
+		get {
+			_nextResponder
+		}
+		set {
+		}
+	}
+	#else
     public override var next: UIResponder? {
         return self._nextResponder
     }
+	#endif
     
     // Use KeyPress.keyCode as dictionary key because KeyPress.key may be invalid for keyUp events.
     private static var activeKeyPresses = [Int: KeyPress]()
@@ -60,9 +94,18 @@ public class KeyboardResponder: UIResponder
     public init(nextResponder: UIResponder?)
     {
         self._nextResponder = nextResponder
+		#if os(macOS)
+		super.init()
+		#endif
     }
+	#if os(macOS)
+	required init?(coder: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+	#endif
 }
 
+#if !os(macOS)
 extension KeyboardResponder
 {
     // Implementation based on Steve Troughton-Smith's gist: https://gist.github.com/steventroughtonsmith/7515380
@@ -167,3 +210,4 @@ extension KeyboardResponder
         }
     }
 }
+#endif

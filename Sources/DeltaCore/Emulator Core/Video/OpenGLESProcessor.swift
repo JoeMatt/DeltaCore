@@ -7,15 +7,23 @@
 //
 
 import CoreImage
-#if targetEnvironment(macCatalyst)
+#if targetEnvironment(macCatalyst) || os(macOS)
 import OpenGL
+import OpenGL.GL3
 import OpenGL.GLTypes
 import AppKit
 import GLUT
-import GLKit
 #else
 import GLKit
 public typealias GLContext = EAGLContext
+#endif
+
+#if targetEnvironment(macCatalyst)
+import GLKit
+#endif
+
+#if os(macOS)
+public typealias GLContext = NSOpenGLContext
 #endif
 
 class OpenGLESProcessor: VideoProcessor
@@ -32,9 +40,12 @@ class OpenGLESProcessor: VideoProcessor
         }
     }
 
-#if !targetEnvironment(macCatalyst)
-    private let context: EAGLContext
-#endif
+	#if targetEnvironment(macCatalyst)
+	#elseif os(macOS)
+	private let context: NSOpenGLContext
+	#else
+	private let context: EAGLContext
+	#endif
 
     private var framebuffer: GLuint = 0
     private var texture: GLuint = 0
@@ -46,11 +57,11 @@ class OpenGLESProcessor: VideoProcessor
     init(videoFormat: VideoFormat, context: GLContext)
     {
         self.videoFormat = videoFormat
-#if targetEnvironment(macCatalyst)
+#if targetEnvironment(macCatalyst) || os(macOS)
+		self.context = NSOpenGLContext(format: context.pixelFormat, share: context)!
 #else
         self.context = GLContext(api: .openGLES2, sharegroup: context.sharegroup)!
 #endif
-
     }
 
     deinit
@@ -99,9 +110,12 @@ extension OpenGLESProcessor
             var u: GLfloat
             var v: GLfloat
         }
-        
+
+		#if !os(macOS)
         EAGLContext.setCurrent(self.context)
-        
+		#else
+		self.context.makeCurrentContext()
+		#endif
         // Vertex buffer
         let vertices = [Vertex(x: -1.0, y: -1.0, z: 1.0, u: 0.0, v: 0.0),
                         Vertex(x: 1.0, y: -1.0, z: 1.0, u: 1.0, v: 0.0),
@@ -162,8 +176,11 @@ private extension OpenGLESProcessor
     {
         guard self.texture > 0 && self.renderbuffer > 0 else { return }
         
-        EAGLContext.setCurrent(self.context)
-        
+#if !os(macOS)
+EAGLContext.setCurrent(self.context)
+#else
+self.context.makeCurrentContext()
+#endif
         glBindTexture(GLenum(GL_TEXTURE_2D), self.texture)
         glTexImage2D(GLenum(GL_TEXTURE_2D), 0, GL_RGBA, GLsizei(self.videoFormat.dimensions.width), GLsizei(self.videoFormat.dimensions.height), 0, GLenum(GL_RGBA), GLenum(GL_UNSIGNED_BYTE), nil)
         glBindTexture(GLenum(GL_TEXTURE_2D), 0)

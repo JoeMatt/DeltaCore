@@ -6,6 +6,7 @@
 //  Copyright © 2016 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 
 public extension UIScreen
@@ -34,3 +35,4 @@ public extension UIScreen
         }
     }
 }
+#endif

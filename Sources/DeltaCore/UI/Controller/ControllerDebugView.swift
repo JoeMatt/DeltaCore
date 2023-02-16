@@ -6,6 +6,7 @@
 //  Copyright © 2015 Riley Testut. All rights reserved.
 //
 
+#if canImport(UIKit)
 import UIKit
 import Foundation
 
@@ -126,3 +127,4 @@ private class ItemView: UIView
         fatalError()
     }
 }
+#endif
