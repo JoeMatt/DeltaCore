@@ -81,7 +81,7 @@ public class VideoManager: NSObject, VideoRendering
 		self.context = NSOpenGLContext(format: pixelFormat, share: nil)!
 		self.ciContext = CIContext.init(cglContext: self.context.cglContextObj!, pixelFormat: self.context.pixelFormat.cglPixelFormatObj)
 		#else
-        self.context = EAGLContext(api: .openGLES2)!
+        self.context = EAGLContext(api: .openGLES3)!
         self.ciContext = CIContext(eaglContext: self.context, options: [.workingColorSpace: NSNull()])
 		#endif
         switch videoFormat.format
@@ -122,7 +122,7 @@ public extension VideoManager
     {
 
 		#if !os(macOS)
-		gameView.eaglContext = self.context
+        gameView.eaglContext = self.context
 		#else
 		// TODO: What to do here for metal?
 		#endif
@@ -196,7 +196,7 @@ public extension VideoManager
             let dataProvider = CGDataProvider(data: data as CFData),
             let cgImage = CGImage(width: imageWidth, height: imageHeight, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: imageWidth * 4, space: colorSpace, bitmapInfo: bitmapInfo, provider: dataProvider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
         else { return nil }
-
+        
 		#if os(macOS)
 		let image = NSImage(cgImage: cgImage, size: .init(width: imageWidth, height: imageHeight))
 		#else
