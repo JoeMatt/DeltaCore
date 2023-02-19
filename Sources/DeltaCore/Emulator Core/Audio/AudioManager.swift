@@ -82,6 +82,18 @@ public class AudioManager: NSObject, AudioRendering {
         }
     }
     
+    public var overrideVolume: Float = 1.0 {
+        didSet {
+            self.updateOutputVolume()
+        }
+    }
+    
+    public var respectMuteSwitch: Bool = true {
+        didSet {
+            self.updateOutputVolume()
+        }
+    }
+    
     var frameDuration: Double = (1.0 / 60.0) {
         didSet {
             guard self.audioEngine.isRunning else { return }

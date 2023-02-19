@@ -39,31 +39,31 @@ class OpenGLESProcessor: VideoProcessor
             self.resizeVideoBuffers()
         }
     }
-
+    
 	#if targetEnvironment(macCatalyst)
 	#elseif os(macOS)
 	private let context: NSOpenGLContext
 	#else
-	private let context: EAGLContext
+    private let context: EAGLContext
 	#endif
-
+    
     private var framebuffer: GLuint = 0
     private var texture: GLuint = 0
     private var renderbuffer: GLuint = 0
     
     private var indexBuffer: GLuint = 0
     private var vertexBuffer: GLuint = 0
-
+    
     init(videoFormat: VideoFormat, context: GLContext)
     {
         self.videoFormat = videoFormat
 #if targetEnvironment(macCatalyst) || os(macOS)
 		self.context = NSOpenGLContext(format: context.pixelFormat, share: context)!
 #else
-        self.context = GLContext(api: .openGLES2, sharegroup: context.sharegroup)!
+        self.context = GLContext(api: .openGLES3, sharegroup: context.sharegroup)!
 #endif
     }
-
+    
     deinit
     {
         if self.renderbuffer > 0
@@ -110,7 +110,7 @@ extension OpenGLESProcessor
             var u: GLfloat
             var v: GLfloat
         }
-
+        
 		#if !os(macOS)
         EAGLContext.setCurrent(self.context)
 		#else
@@ -177,7 +177,7 @@ private extension OpenGLESProcessor
         guard self.texture > 0 && self.renderbuffer > 0 else { return }
         
 #if !os(macOS)
-EAGLContext.setCurrent(self.context)
+        EAGLContext.setCurrent(self.context)
 #else
 self.context.makeCurrentContext()
 #endif

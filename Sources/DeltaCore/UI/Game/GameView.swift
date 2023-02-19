@@ -47,12 +47,12 @@ private class GameViewMetalViewDelegate: NSObject, MTKViewDelegate
 private class GameViewGLKViewDelegate: NSObject, GLKViewDelegate
 {
     weak var gameView: GameView?
-
+    
     init(gameView: GameView)
     {
         self.gameView = gameView
     }
-
+    
     func glkView(_ view: GLKView, drawIn rect: CGRect)
     {
         self.gameView?.glkView(view, drawIn: rect)
@@ -119,7 +119,7 @@ public class GameView: UIView
         
         return image
     }
-
+    
 #if targetEnvironment(macCatalyst) || os(macOS)
 	internal let metalView: MTKView
 	private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
@@ -136,7 +136,7 @@ public class GameView: UIView
             // to self.glkView may crash if we've already rendered to a game view.
             EAGLContext.setCurrent(nil)
             
-            self.glkView.context = EAGLContext(api: .openGLES2, sharegroup: newValue.sharegroup)!
+            self.glkView.context = EAGLContext.createWithBestAvailableAPI(newValue.sharegroup)
             self.context = self.makeContext()
             
             DispatchQueue.main.async {
@@ -145,19 +145,19 @@ public class GameView: UIView
             }
         }
     }
-
+        
     private let glkView: GLKView
     private lazy var glkViewDelegate = GameViewGLKViewDelegate(gameView: self)
 #endif
     private lazy var context: CIContext = self.makeContext()
-
+    
     private var lock = os_unfair_lock()
     private var didLayoutSubviews = false
     
     public override init(frame: CGRect)
     {
 #if !targetEnvironment(macCatalyst) && !os(macOS)
-        let eaglContext = EAGLContext(api: .openGLES2)!
+        let eaglContext = EAGLContext(api: .openGLES3)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
 		#else
 		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
@@ -171,19 +171,19 @@ public class GameView: UIView
     public required init?(coder aDecoder: NSCoder)
     {
 #if !targetEnvironment(macCatalyst) && !os(macOS)
-        let eaglContext = EAGLContext(api: .openGLES2)!
+        let eaglContext = EAGLContext(api: .openGLES3)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
 #else
 		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
 		self.metalView = .init(frame: .zero, device: device)
 #endif
-		super.init(coder: aDecoder)
+        super.init(coder: aDecoder)
         
         self.initialize()
     }
     
     private func initialize()
-    {
+    {        
 		#if os(macOS)
 		self.metalView.frame = self.bounds
 		self.metalView.autoresizingMask = [.width, .height]
