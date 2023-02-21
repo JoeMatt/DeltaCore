@@ -201,7 +201,7 @@ public class MFiGameController: NSObject, GameController
                 thumbstickChangedHandler(.rightThumbstickDown, .rightThumbstickUp, value)
             }
             
-            if #available(iOS 12.1, *)
+			if #available(iOS 12.1, tvOS 12.1, *)
             {
                 extendedGamepad.leftThumbstickButton?.pressedChangedHandler = { (button, value, pressed) in inputChangedHandler(.leftThumbstickButton, pressed) }
                 extendedGamepad.rightThumbstickButton?.pressedChangedHandler = { (button, value, pressed) in inputChangedHandler(.rightThumbstickButton, pressed) }
