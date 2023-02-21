@@ -442,7 +442,7 @@ private extension EmulatorCore
             
             var emulationTime = Thread.absoluteSystemTime
             var counter = 0.0
-            
+
             while true
             {
                 let frameDuration = self.deltaCore.emulatorBridge.frameDuration / self.rate
