@@ -13,9 +13,11 @@ import AudioToolbox
 @_silgen_name("AudioServicesStopSystemSound")
 func AudioServicesStopSystemSound(_ soundID: SystemSoundID)
 
+#if !targetEnvironment(macCatalyst) && !os(macOS)
 // vibrationPattern parameter must be NSDictionary to prevent crash when bridging from Swift.Dictionary.
 @_silgen_name("AudioServicesPlaySystemSoundWithVibration")
 func AudioServicesPlaySystemSoundWithVibration(_ soundID: SystemSoundID, _ idk: Any?, _ vibrationPattern: NSDictionary)
+#endif
 
 public extension UIDevice
 {
@@ -67,9 +69,9 @@ public extension UIDevice
             // Must use NSArray/NSDictionary to prevent crash.
             let pattern: [Any] = [false, 0, true, vibrationLength]
             let dictionary: [String: Any] = ["VibePattern": pattern, "Intensity": 1]
-            
+#if !targetEnvironment(macCatalyst) && !os(macOS)
             AudioServicesPlaySystemSoundWithVibration(kSystemSoundID_Vibrate, nil, dictionary as NSDictionary)
-        
+#endif
         case .basic, .feedbackGenerator: AudioServicesPlaySystemSound(1519) // "peek" vibration
         }
     }

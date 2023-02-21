@@ -29,7 +29,14 @@ import GLKit
 private class GameViewMetalViewDelegate: NSObject, MTKViewDelegate
 {
 	func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-		assertionFailure("Do something?")
+		// Update any state that depends on the view's size
+
+		let device = view.device
+		let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: view.colorPixelFormat, width: Int(size.width), height: Int(size.height), mipmapped: false)
+
+		// Create or update any Metal resources that depend on the view's size
+		// For example, create a new texture or buffer with the updated size
+		// Set up any rendering state that depends on the new resources
 	}
 
 	func draw(in view: MTKView) {
@@ -121,8 +128,8 @@ public class GameView: UIView
     }
     
 #if targetEnvironment(macCatalyst) || os(macOS)
-	internal let metalView: MTKView
-	private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
+	internal let metalView: DeltaMetalView
+//	private lazy var metalViewDelegate = GameViewMetalViewDelegate(gameView: self)
 #else
     internal var eaglContext: EAGLContext {
         get { return self.glkView.context }
@@ -160,8 +167,7 @@ public class GameView: UIView
         let eaglContext = EAGLContext(api: .openGLES3)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
 		#else
-		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
-		self.metalView = .init(frame: .zero, device: device)
+		self.metalView = .init(frame: .zero)
 		#endif
         super.init(frame: frame)
         
@@ -174,8 +180,7 @@ public class GameView: UIView
         let eaglContext = EAGLContext(api: .openGLES3)!
         self.glkView = GLKView(frame: CGRect.zero, context: eaglContext)
 #else
-		let device: MTLDevice? = MTLCreateSystemDefaultDevice()
-		self.metalView = .init(frame: .zero, device: device)
+		self.metalView = .init(frame: .zero)
 #endif
         super.init(coder: aDecoder)
         
@@ -191,7 +196,7 @@ public class GameView: UIView
 		#else
 		self.metalView.autoresizingMask = [.width, .height]
 		#endif
-		self.metalView.delegate = self.metalViewDelegate
+//		self.metalView.delegate = self.metalViewDelegate
 		self.metalView.enableSetNeedsDisplay = false
 		self.addSubview(self.metalView)
 		#else
@@ -337,14 +342,7 @@ private extension GameView
 #if targetEnvironment(macCatalyst) || os(macOS)
 	func metalView(_ view: MTKView)
 	{
-		glClearColor(0.0, 0.0, 0.0, 1.0)
-		glClear(UInt32(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT))
-
-		if let outputImage = self.outputImage
-		{
-			let bounds = CGRect(x: 0, y: 0, width: self.metalView.drawableSize.width, height: self.metalView.drawableSize.height)
-			self.context.draw(outputImage, in: bounds, from: outputImage.extent)
-		}
+	
 	}
 #else
     func glkView(_ view: GLKView, drawIn rect: CGRect)
