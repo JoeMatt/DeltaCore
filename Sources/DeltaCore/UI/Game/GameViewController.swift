@@ -31,7 +31,7 @@ fileprivate extension NSLayoutConstraint
     }
 }
 
-public protocol GameViewControllerDelegate: class
+public protocol GameViewControllerDelegate: AnyObject
 {
     func gameViewControllerShouldPauseEmulation(_ gameViewController: GameViewController) -> Bool
     func gameViewControllerShouldResumeEmulation(_ gameViewController: GameViewController) -> Bool
