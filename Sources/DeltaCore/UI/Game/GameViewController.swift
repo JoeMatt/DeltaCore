@@ -52,9 +52,28 @@ public extension GameViewControllerDelegate
 }
 
 private var kvoContext = 0
+#if os(macOS) || targetEnvironment(macCatalyst)
+private let BUFFER_COUNT = 3
+#endif
 
 open class GameViewController: UIViewController, GameControllerReceiver
 {
+#if os(macOS) || targetEnvironment(macCatalyst)
+	// Metal
+	var alternateThreadFramebufferBack: GLuint = 0
+	var alternateThreadColorTextureBack: GLuint = 0
+	var alternateThreadDepthRenderbuffer: GLuint = 0
+
+	var backingIOSurface: IOSurface? // for OpenGL core support
+	var backingMTLTexture: MTLTexture? // for OpenGL core support
+
+	var _uploadBuffer = [MTLBuffer?](repeating: nil, count: BUFFER_COUNT)
+	var _frameCount: UInt32 = 0
+
+	var renderSettings = RenderSettings()
+	// ~Metal
+#endif
+
     open var game: GameProtocol?
     {
         didSet
