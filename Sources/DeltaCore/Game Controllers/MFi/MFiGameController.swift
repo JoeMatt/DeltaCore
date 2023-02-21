@@ -207,12 +207,12 @@ public class MFiGameController: NSObject, GameController
                 extendedGamepad.rightThumbstickButton?.pressedChangedHandler = { (button, value, pressed) in inputChangedHandler(.rightThumbstickButton, pressed) }
             }
             
-            if #available(iOS 13, *)
+            if #available(iOS 13, tvOS 13, *)
             {
                 extendedGamepad.buttonOptions?.pressedChangedHandler = { (button, value, pressed) in inputChangedHandler(.options, pressed) }
             }
             
-            if #available(iOS 14, *)
+            if #available(iOS 14, tvOS 14, *)
             {
                 extendedGamepad.buttonHome?.pressedChangedHandler = { (button, value, pressed) in inputChangedHandler(.home, pressed) }
                 
@@ -230,7 +230,7 @@ public class MFiGameController: NSObject, GameController
                 }
             }
             
-            if #available(iOS 14.5, *)
+			if #available(iOS 14.5, tvOS 14.5, *)
             {
                 if let dualSenseGamepad = extendedGamepad as? GCDualSenseGamepad
                 {

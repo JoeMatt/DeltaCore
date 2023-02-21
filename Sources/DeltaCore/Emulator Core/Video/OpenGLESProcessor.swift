@@ -19,7 +19,7 @@ public typealias GLContext = EAGLContext
 #endif
 
 #if targetEnvironment(macCatalyst)
-import GLKit
+public typealias GLContext = CIContext
 #endif
 
 #if os(macOS)
@@ -53,17 +53,25 @@ class OpenGLESProcessor: VideoProcessor
     
     private var indexBuffer: GLuint = 0
     private var vertexBuffer: GLuint = 0
-    
+
+#if targetEnvironment(macCatalyst)
+	init(videoFormat: VideoFormat)
+	{
+		self.videoFormat = videoFormat
+	}
+#elseif os(macOS)
+	init(videoFormat: VideoFormat, context: GLContext)
+	{
+		self.videoFormat = videoFormat
+		self.context = NSOpenGLContext(format: context.pixelFormat, share: context)!
+	}
+	#else
     init(videoFormat: VideoFormat, context: GLContext)
     {
         self.videoFormat = videoFormat
-#if targetEnvironment(macCatalyst) || os(macOS)
-		self.context = NSOpenGLContext(format: context.pixelFormat, share: context)!
-#else
         self.context = GLContext(api: .openGLES3, sharegroup: context.sharegroup)!
-#endif
     }
-    
+	#endif
     deinit
     {
         if self.renderbuffer > 0
@@ -111,8 +119,10 @@ extension OpenGLESProcessor
             var v: GLfloat
         }
         
-		#if !os(macOS)
+		#if !os(macOS) && !targetEnvironment(macCatalyst)
         EAGLContext.setCurrent(self.context)
+		#elseif targetEnvironment(macCatalyst)
+		// TODO:?
 		#else
 		self.context.makeCurrentContext()
 		#endif
@@ -176,9 +186,11 @@ private extension OpenGLESProcessor
     {
         guard self.texture > 0 && self.renderbuffer > 0 else { return }
         
-#if !os(macOS)
+#if !os(macOS) && !targetEnvironment(macCatalyst)
         EAGLContext.setCurrent(self.context)
-#else
+#elseif targetEnvironment(macCatalyst)
+		// TODO: ?
+		#else
 self.context.makeCurrentContext()
 #endif
         glBindTexture(GLenum(GL_TEXTURE_2D), self.texture)

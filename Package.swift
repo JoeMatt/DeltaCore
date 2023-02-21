@@ -38,7 +38,18 @@ let package = Package(
     targets: [
         .target(
             name: "DeltaTypes",
-            publicHeadersPath: "include"
+            publicHeadersPath: "include",
+			cSettings: [
+				.define("GL_SILENCE_DEPRECATION"),
+				.define("GLES_SILENCE_DEPRECATION"),
+				.define("CI_SILENCE_GL_DEPRECATION"),
+				.headerSearchPath("../DeltaCore/include")
+			],
+			swiftSettings: [
+				.define("GL_SILENCE_DEPRECATION"),
+				.define("GLES_SILENCE_DEPRECATION"),
+				.define("CI_SILENCE_GL_DEPRECATION")
+			]
         ),
 
         .target(
@@ -53,11 +64,13 @@ let package = Package(
             ],
 //            publicHeadersPath: "include",
             cSettings: [
+				.define("GL_SILENCE_DEPRECATION"),
                 .define("GLES_SILENCE_DEPRECATION"),
                 .define("CI_SILENCE_GL_DEPRECATION"),
                 .headerSearchPath("../DeltaCore/include")
             ],
             swiftSettings: [
+				.define("GL_SILENCE_DEPRECATION"),
                 .define("GLES_SILENCE_DEPRECATION"),
                 .define("CI_SILENCE_GL_DEPRECATION")
             ],
