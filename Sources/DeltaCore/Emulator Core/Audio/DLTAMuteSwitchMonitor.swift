@@ -66,7 +66,7 @@ public final class DLTAMuteSwitchMonitor {
 
         notify_register_dispatch("com.apple.springboard.ringerstate", &notifyToken, DispatchQueue.main)
         { [weak self] _ in
-            guard let strongSelf = self else { return }
+            guard let self = self else { return }
             updateMutedState()
         }
 
