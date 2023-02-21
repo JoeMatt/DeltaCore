@@ -6,7 +6,11 @@
 //  Copyright (c) 2023 Joseph Mattiello. All rights reserved.
 //
 
+#if SWIFT_MODULE
+@import Foundation;
+#else
 #import <Foundation/Foundation.h>
+#endif
 //! Project version number for DeltaCore.
 FOUNDATION_EXPORT double DeltaCoreVersionNumber;
 

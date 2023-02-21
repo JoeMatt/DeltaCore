@@ -107,7 +107,7 @@ public class AudioManager: NSObject, AudioRendering {
     
     // Workaround for stored properties no longer being allowed marked @available
     // Use a type-erased wrapper instead
-    @available(iOS 14.0, tvOS 13.0, *)
+    @available(iOS 13.0, tvOS 13.0, *)
     private var sourceNode: AVAudioSourceNode! {
         get { return self.sourceNodeInternal as? AVAudioSourceNode}
     }
@@ -430,7 +430,7 @@ private extension AudioManager
         }
     }
 
-    @available(iOS 14.0, tvOS 13.0, macOS 13, *)
+    @available(iOS 13.0, tvOS 13.0, macOS 13, *)
     func makeSourceNode() -> AVAudioSourceNode {
         var isPrimed = false
         var previousSampleCount: Int?
