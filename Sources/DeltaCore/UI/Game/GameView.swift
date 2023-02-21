@@ -20,7 +20,6 @@ import OpenGL
 import GLUT
 import Metal
 import MetalKit
-//import GLKit
 #else
 import GLKit
 #endif

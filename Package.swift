@@ -77,7 +77,11 @@ let package = Package(
             linkerSettings: [
                 .linkedFramework("UIKit", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
                 .linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
-                .linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
+                .linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macOS])),
+				.linkedFramework("MetalKit"),
+				.linkedFramework("Metal"),
+				.linkedFramework("OpenGLES", .when(platforms: [.iOS, .tvOS])),
+				.linkedFramework("OpenGL", .when(platforms: [.macOS, .macCatalyst])),
                 .linkedFramework("WatchKit", .when(platforms: [.watchOS]))
             ]
         ),
