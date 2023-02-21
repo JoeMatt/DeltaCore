@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import CoreAudio
 
 internal extension AVAudioFormat {
     var frameSize: Int {
@@ -437,7 +438,7 @@ private extension AudioManager
 
         // Accessing AVAudioSession.sharedInstance() from render block may cause audio glitches,
         // so calculate sampleRateRatio now rather than later when needed 🤷‍♂️
-#if !os(macOS)
+		#if !os(macOS)
         let sampleRateRatio = (self.audioFormat.sampleRate / AVAudioSession.sharedInstance().sampleRate).rounded(.up)
 		#else
 		let sampleRateRatio: Double = 1.0

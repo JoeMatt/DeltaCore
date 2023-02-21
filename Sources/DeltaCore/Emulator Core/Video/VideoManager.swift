@@ -9,7 +9,17 @@
 import Foundation
 import Accelerate
 import CoreImage
+#if !targetEnvironment(macCatalyst)
 import GLKit
+#endif
+#if canImport(OpenGLES)
+import OpenGLES
+#endif
+#if canImport(AppKit)
+import AppKit.NSOpenGL
+import AppKit
+#endif
+
 #if canImport(Metal)
 import Metal
 import MetalKit
@@ -54,8 +64,10 @@ public class VideoManager: NSObject, VideoRendering
     public private(set) var gameViews = [GameView]()
     
     public var isEnabled = true
-    
+
+	#if !targetEnvironment(macCatalyst)
     private let context: EAGLContext
+	#endif
     private let ciContext: CIContext
     
     private var processor: VideoProcessor
@@ -80,16 +92,23 @@ public class VideoManager: NSObject, VideoRendering
 		let pixelFormat = NSOpenGLPixelFormat(attributes: attributes)!
 		self.context = NSOpenGLContext(format: pixelFormat, share: nil)!
 		self.ciContext = CIContext.init(cglContext: self.context.cglContextObj!, pixelFormat: self.context.pixelFormat.cglPixelFormatObj)
+		#elseif targetEnvironment(macCatalyst)
+		self.ciContext = .init(mtlDevice: MTLCreateSystemDefaultDevice()!)
+		self.processor = OpenGLESProcessor(videoFormat: videoFormat)
 		#else
         self.context = EAGLContext(api: .openGLES3)!
         self.ciContext = CIContext(eaglContext: self.context, options: [.workingColorSpace: NSNull()])
 		#endif
+
+		#if !targetEnvironment(macCatalyst)
         switch videoFormat.format
         {
         case .bitmap: self.processor = BitmapProcessor(videoFormat: videoFormat)
         case .openGLES: self.processor = OpenGLESProcessor(videoFormat: videoFormat, context: self.context)
         }
-        
+		#else // catalyst
+		// TODO: ?
+		#endif
         super.init()
         
         self.renderThread.start()
@@ -121,7 +140,7 @@ public extension VideoManager
     func add(_ gameView: GameView)
     {
 
-		#if !os(macOS)
+		#if !os(macOS) && !targetEnvironment(macCatalyst)
         gameView.eaglContext = self.context
 		#else
 		// TODO: What to do here for metal?

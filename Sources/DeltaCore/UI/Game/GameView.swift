@@ -12,7 +12,6 @@ import UIKit
 import AppKit
 #endif
 import CoreImage
-import GLKit
 import AVFoundation
 #if targetEnvironment(macCatalyst) || os(macOS)
 import OpenGL.GLTypes
@@ -21,6 +20,8 @@ import OpenGL
 import GLUT
 import Metal
 import MetalKit
+//import GLKit
+#else
 import GLKit
 #endif
 
@@ -184,18 +185,20 @@ public class GameView: UIView
     
     private func initialize()
     {        
-		#if os(macOS)
+		#if os(macOS) || targetEnvironment(macCatalyst)
 		self.metalView.frame = self.bounds
+		#if targetEnvironment(macCatalyst)
+		self.metalView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+		#else
 		self.metalView.autoresizingMask = [.width, .height]
+		#endif
 		self.metalView.delegate = self.metalViewDelegate
 		self.metalView.enableSetNeedsDisplay = false
 		self.addSubview(self.metalView)
 		#else
         self.glkView.frame = self.bounds
-#if !targetEnvironment(macCatalyst)
-        self.glkView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+		self.glkView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.glkView.delegate = self.glkViewDelegate
-#endif
         self.glkView.enableSetNeedsDisplay = false
         self.addSubview(self.glkView)
 		#endif
@@ -220,17 +223,25 @@ public class GameView: UIView
     {
         if let window = self.window
         {
+			#if targetEnvironment(macCatalyst)
+			self.metalView.contentScaleFactor = window.screen.scale
+			#else
             self.glkView.contentScaleFactor = window.screen.scale
-            self.update()
+			#endif
+			self.update()
         }
     }
     
     public override func layoutSubviews()
     {
         super.layoutSubviews()
-        
-        self.glkView.isHidden = (self.outputImage == nil)
-        
+
+#if targetEnvironment(macCatalyst)
+		self.metalView.isHidden = (self.outputImage == nil)
+#else
+		self.glkView.isHidden = (self.outputImage == nil)
+#endif
+
         self.didLayoutSubviews = true
     }
 	#endif
@@ -258,7 +269,11 @@ public extension GameView
         let renderer = UIGraphicsImageRenderer(size: rect.size, format: format)
         
         let snapshot = renderer.image { (context) in
-            self.glkView.drawHierarchy(in: rect, afterScreenUpdates: false)
+#if targetEnvironment(macCatalyst)
+			self.metalView.drawHierarchy(in: rect, afterScreenUpdates: false)
+#else
+			self.glkView.drawHierarchy(in: rect, afterScreenUpdates: false)
+#endif
         }
         
         return snapshot
@@ -310,8 +325,8 @@ private extension GameView
         // Otherwise, the app may crash due to race conditions when creating framebuffer from background thread.
         guard self.didLayoutSubviews else { return }
 
-		#if os(macOS)
-		self.metalView.display()
+		#if os(macOS) || targetEnvironment(macCatalyst)
+		self.metalView.display(self.layer)
 		#else
         self.glkView.display()
 		#endif

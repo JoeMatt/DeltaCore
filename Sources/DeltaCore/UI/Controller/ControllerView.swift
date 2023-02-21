@@ -343,7 +343,7 @@ extension ControllerView
     }
     
     public override var next: UIResponder? {
-        if #available(iOS 15, *)
+        if #available(iOS 15, tvOS 15, *)
         {
             return super.next
         }
