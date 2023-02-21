@@ -75,14 +75,16 @@ let package = Package(
                 .define("CI_SILENCE_GL_DEPRECATION")
             ],
             linkerSettings: [
-                .linkedFramework("UIKit", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
-                .linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
-                .linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macOS])),
-				.linkedFramework("MetalKit"),
+				.linkedFramework("Accelerate"),
+				.linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
+				.linkedFramework("CoreImage"),
+				.linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macOS])),
 				.linkedFramework("Metal"),
+				.linkedFramework("MetalKit"),
 				.linkedFramework("OpenGLES", .when(platforms: [.iOS, .tvOS])),
 				.linkedFramework("OpenGL", .when(platforms: [.macOS, .macCatalyst])),
-                .linkedFramework("WatchKit", .when(platforms: [.watchOS]))
+				.linkedFramework("UIKit", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
+				.linkedFramework("WatchKit", .when(platforms: [.watchOS]))
             ]
         ),
     ]
