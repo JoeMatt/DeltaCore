@@ -136,7 +136,7 @@ public class GameView: UIView
             // to self.glkView may crash if we've already rendered to a game view.
             EAGLContext.setCurrent(nil)
             
-            self.glkView.context = EAGLContext.createWithBestAvailableAPI(newValue.sharegroup)
+            self.glkView.context = GLContext(api: .openGLES3, sharegroup: newValue.sharegroup)!
             self.context = self.makeContext()
             
             DispatchQueue.main.async {
