@@ -100,7 +100,8 @@ public class KeyboardResponder: UIResponder
     }
 	#if os(macOS)
 	required init?(coder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
+		_nextResponder = coder.decodeObject(of: NSResponder?.self, forKey: "_nextResponder")
+		super.init(coder: coder)
 	}
 	#endif
 }
