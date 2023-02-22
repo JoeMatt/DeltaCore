@@ -82,7 +82,8 @@ public class ExternalGameControllerManager: UIResponder
 
 	#if os(macOS)
 	required init?(coder: NSCoder) {
-		fatalError("init(coder:) has not been implemented")
+		automaticallyAssignsPlayerIndexes = coder.decodeObject(of: Bool.self, forKey: "automaticallyAssignsPlayerIndexes")
+		super.init(coder: coder)
 	}
 	#endif
 }
