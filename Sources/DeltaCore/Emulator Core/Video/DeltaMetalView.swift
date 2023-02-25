@@ -166,6 +166,8 @@ open class DeltaMetalView: MTKView {
 	static private let bitsPerComponent: Int = 8
 	static private let imageSize: CGSize = CGSize(width: 480, height: 640)
 
+	open override var isOpaque: Bool { true }
+
 	public init(frame frameRect: CGRect) {
 		let dev: MTLDevice = MTLCreateSystemDefaultDevice()!
 		let commandQueue = dev.makeCommandQueue()!
@@ -182,8 +184,7 @@ open class DeltaMetalView: MTKView {
 		self.enableSetNeedsDisplay = false
 		self.framebufferOnly = false
 		self.delegate = self
-		self.isOpaque = true
-		self.clearsContextBeforeDrawing = false
+		self.clearColor = .init(red: 0, green: 0, blue: 0, alpha: 1)
 		NotificationCenter.default.addObserver(self, selector: #selector(appResignedActive), name: UIApplication.willResignActiveNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
 	}
@@ -204,8 +205,7 @@ open class DeltaMetalView: MTKView {
 		self.enableSetNeedsDisplay = false
 		self.framebufferOnly = false
 		self.delegate = self
-		self.isOpaque = true
-		self.clearsContextBeforeDrawing = false
+		self.clearColor = .init(red: 0, green: 0, blue: 0, alpha: 1)
 		NotificationCenter.default.addObserver(self, selector: #selector(appResignedActive), name: UIApplication.willResignActiveNotification, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(appBecameActive), name: UIApplication.didBecomeActiveNotification, object: nil)
 

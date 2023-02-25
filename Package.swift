@@ -5,9 +5,10 @@ import PackageDescription
 
 let package = Package(
     name: "DeltaCore",
+	defaultLocalization: "en",
     platforms: [
         .iOS(.v12),
-        .macOS(.v11),
+        .macOS(.v12),
         .tvOS(.v12),
         .macCatalyst(.v13)
     ],
@@ -75,7 +76,7 @@ let package = Package(
                 .define("CI_SILENCE_GL_DEPRECATION")
             ],
             linkerSettings: [
-				.linkedFramework("Accelerate"),
+				.linkedFramework("Accelerate", .when(platforms: [.iOS, .tvOS, .macCatalyst])),
 				.linkedFramework("AVFoundation", .when(platforms: [.iOS, .tvOS, .macCatalyst, .macOS])),
 				.linkedFramework("CoreImage"),
 				.linkedFramework("GLKit", .when(platforms: [.iOS, .tvOS, .macOS])),
