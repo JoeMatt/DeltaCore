@@ -52,7 +52,10 @@ public final class DLTAMuteSwitchMonitor {
         isMonitoring = true
         isMutedChangedHandler = muteHandler
 
+		weak var weakSelf = self
+
         func updateMutedState() {
+			guard let self = weakSelf else { return }
             var state: UInt64 = 0
             let result = notify_get_state(self.notifyToken, &state)
             guard result == NOTIFY_STATUS_OK else {
@@ -65,8 +68,8 @@ public final class DLTAMuteSwitchMonitor {
         }
 
         notify_register_dispatch("com.apple.springboard.ringerstate", &notifyToken, DispatchQueue.main)
-        { [weak self] _ in
-            guard let self = self else { return }
+		{ _ in
+			guard weakSelf != nil else { return }
             updateMutedState()
         }
 

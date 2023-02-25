@@ -71,10 +71,9 @@ extension UIResponder
 
 public class KeyboardResponder: UIResponder
 {
-    private let _nextResponder: UIResponder?
-
 	#if os(macOS)
-	public override var nextResponder: UIResponder? {
+	private let _nextResponder: NSResponder?
+	public override var nextResponder: NSResponder? {
 		get {
 			_nextResponder
 		}
@@ -82,6 +81,7 @@ public class KeyboardResponder: UIResponder
 		}
 	}
 	#else
+	private let _nextResponder: UIResponder?
     public override var next: UIResponder? {
         return self._nextResponder
     }
@@ -100,7 +100,7 @@ public class KeyboardResponder: UIResponder
     }
 	#if os(macOS)
 	required init?(coder: NSCoder) {
-		_nextResponder = coder.decodeObject(of: NSResponder?.self, forKey: "_nextResponder")
+		_nextResponder = coder.decodeObject(of: NSResponder.self, forKey: "_nextResponder")
 		super.init(coder: coder)
 	}
 	#endif

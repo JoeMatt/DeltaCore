@@ -75,7 +75,7 @@ public enum SamplerMode
 
 #if os(macOS)
 public extension NSView {
-	public func setNeedsLayout() { self.needsLayout = true }
+	func setNeedsLayout() { self.needsLayout = true }
 }
 #endif
 
@@ -330,7 +330,9 @@ private extension GameView
         guard self.didLayoutSubviews else { return }
 
 		#if os(macOS) || targetEnvironment(macCatalyst)
-		self.metalView.display(self.layer)
+		if let layer = self.layer {
+			self.metalView.display(layer)
+		}
 		#else
         self.glkView.display()
 		#endif

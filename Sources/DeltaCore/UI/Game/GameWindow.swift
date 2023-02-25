@@ -65,7 +65,7 @@ public class NSTableViewViewController: NSViewController, NSTableViewDelegate, N
 		}
 	}
 
-	public var tableView: NSTableView! = {
+	public lazy var tableView: NSTableView! = {
 		let cv: NSTableView = .init()
 		cv.delegate = self
 		cv.dataSource = self

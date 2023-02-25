@@ -7,7 +7,9 @@
 //
 
 import CoreImage
+#if canImport(Accelerate) && !os(macOS) && !targetEnvironment(simulator)
 import Accelerate
+#endif
 
 fileprivate extension VideoFormat.PixelFormat
 {
@@ -73,7 +75,8 @@ extension BitmapProcessor
     func prepare()
     {
     }
-    
+
+#if canImport(Accelerate) && !os(macOS) && !targetEnvironment(simulator)
     func processFrame() -> CIImage?
     {
         guard let ciFormat = self.outputVideoFormat.pixelFormat.nativeCIFormat else {
@@ -106,4 +109,9 @@ extension BitmapProcessor
             return image
         }
     }
+	#else
+	func processFrame() -> CIImage? {
+		return nil
+	}
+	#endif
 }

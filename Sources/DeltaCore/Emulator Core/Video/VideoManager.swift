@@ -7,7 +7,9 @@
 //
 
 import Foundation
+#if canImport(Accelerate) && !os(macOS)
 import Accelerate
+#endif
 import CoreImage
 #if !targetEnvironment(macCatalyst)
 import GLKit

@@ -82,7 +82,7 @@ public class ExternalGameControllerManager: UIResponder
 
 	#if os(macOS)
 	required init?(coder: NSCoder) {
-		automaticallyAssignsPlayerIndexes = coder.decodeObject(of: Bool.self, forKey: "automaticallyAssignsPlayerIndexes")
+		automaticallyAssignsPlayerIndexes = coder.decodeBool(forKey: "automaticallyAssignsPlayerIndexes")
 		super.init(coder: coder)
 	}
 	#endif
