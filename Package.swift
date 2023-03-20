@@ -88,5 +88,6 @@ let package = Package(
 				.linkedFramework("WatchKit", .when(platforms: [.watchOS]))
             ]
         ),
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
